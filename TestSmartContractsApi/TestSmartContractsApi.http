@@ -1,0 +1,6 @@
+@TestSmartContractsApi_HostAddress = http://localhost:5228
+
+GET {{TestSmartContractsApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
