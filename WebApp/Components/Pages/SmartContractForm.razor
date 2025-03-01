@@ -1,0 +1,16 @@
+﻿@inject HttpClient Http
+
+@code {
+    private string contractName = "";
+    private string responseMessage = "";
+
+    private async Task GenerateContract()
+    {
+        responseMessage = await Http.GetStringAsync($"/api/contracts/generate?name={contractName}");
+    }
+}
+
+<h3>Generate Smart Contract</h3>
+<input @bind="contractName" placeholder="Enter contract name" />
+<button @onclick="GenerateContract">Generate</button>
+<p>@responseMessage</p>

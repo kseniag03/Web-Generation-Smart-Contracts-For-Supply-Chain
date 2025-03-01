@@ -1,4 +1,38 @@
 ﻿using Core.Interfaces;
+using Nethereum.Web3;
+
+namespace Infrastructure.Blockchain
+{
+    public class NethereumBlockchainService : IBlockchainService
+    {
+        private readonly Web3 _web3;
+
+        public NethereumBlockchainService(string rpcUrl)
+        {
+            _web3 = new Web3(rpcUrl);
+        }
+
+        public async Task<string> DeployContractAsync(string contractCode)
+        {
+            var senderAddress = "0xYourAddress";
+            return await _web3.Eth.DeployContract.SendRequestAsync(senderAddress, contractCode);
+        }
+
+        public async Task<bool> TestContractAsync(string contractName)
+        {
+            return true; // testing logic
+        }
+
+        public async Task<object> GetContractInfoAsync(string contractAddress)
+        {
+            return new { Address = contractAddress, Status = "Active" };
+        }
+    }
+}
+
+
+/*
+using Core.Interfaces;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
@@ -30,6 +64,11 @@ namespace Infrastructure
             return txHash;
         }
 
+        public Task<object> GetContractInfoAsync(string contractAddress)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<string> SendTransactionAsync(string to, decimal amount)
         {
             var valueInWei = Web3.Convert.ToWei(amount); // Перевод ETH в Wei
@@ -47,6 +86,12 @@ namespace Infrastructure
 
             return txHash;
         }
+
+        public Task<bool> TestContractAsync(string contractName)
+        {
+            throw new NotImplementedException();
+        }
     }
 
 }
+*/

@@ -9,7 +9,10 @@
   <ItemGroup>
     <Folder Include="DTOs\" />
     <Folder Include="Mappings\" />
-    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
 </Project>

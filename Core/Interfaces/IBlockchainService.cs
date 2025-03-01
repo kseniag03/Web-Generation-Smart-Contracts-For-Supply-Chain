@@ -2,7 +2,8 @@
 {
     public interface IBlockchainService
     {
-        Task<string> DeployContractAsync(string contractBytecode);
-        Task<string> SendTransactionAsync(string to, decimal amount);
+        Task<string> DeployContractAsync(string contractCode);
+        Task<bool> TestContractAsync(string contractName);
+        Task<object> GetContractInfoAsync(string contractAddress);
     }
 }
