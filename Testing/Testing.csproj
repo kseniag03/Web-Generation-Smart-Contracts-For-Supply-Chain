@@ -18,4 +18,10 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="CoreTests\" />
+    <Folder Include="InfrastructureTests\" />
+    <Folder Include="WebTests\" />
+  </ItemGroup>
+
 </Project>

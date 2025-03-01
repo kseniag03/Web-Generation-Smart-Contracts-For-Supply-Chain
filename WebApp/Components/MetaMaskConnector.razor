@@ -1,0 +1,47 @@
+﻿@page "/metamask"
+@inject IJSRuntime JSRuntime
+
+<h3>MetaMaskConnector</h3>
+
+<button @onclick="ConnectMetaMask">Подключить MetaMask</button>
+
+@if (!string.IsNullOrEmpty(Account))
+{
+    <p>Подключённый аккаунт: @Account</p>
+}
+else if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color: red;">Ошибка: @ErrorMessage</p>
+}
+
+@code {
+    private string Account { get; set; }
+    private string ErrorMessage { get; set; }
+
+    private async Task ConnectMetaMask()
+    {
+        try
+        {
+            // Вызываем функцию connectMetaMask из JavaScript через interop
+            var accounts = await JSRuntime.InvokeAsync<string[]>("myWeb3Functions.connectMetaMask");
+
+            if (accounts != null && accounts.Length > 0)
+            {
+                Account = accounts[0];
+                ErrorMessage = string.Empty;
+            }
+            else
+            {
+                ErrorMessage = "Аккаунты не получены";
+            }
+        }
+        catch (JSException jsEx)
+        {
+            ErrorMessage = $"Ошибка JS: {jsEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Ошибка: {ex.Message}";
+        }
+    }
+}
