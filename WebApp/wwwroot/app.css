@@ -58,3 +58,46 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.code-container {
+    position: relative;
+    background-color: #282c34;
+    border-radius: 5px;
+    padding: 10px;
+    overflow: auto;
+    max-width: 800px;
+    max-height: 500px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.code-box {
+    width: 100%;
+    min-height: 200px;
+    max-height: 600px;
+    resize: vertical;
+    overflow: auto;
+    font-family: "Fira Code", monospace;
+    background: #1e1e1e;
+    color: #ccc;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #007bff;
+    color: white;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+}
+
+.copy-btn:hover {
+    background: #4fa3d1;
+}

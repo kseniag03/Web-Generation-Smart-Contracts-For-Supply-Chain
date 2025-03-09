@@ -6,12 +6,12 @@ namespace Application.Services
     public class SmartContractService
     {
         private readonly ISmartContractRepository _contractRepository;
-        private readonly IBlockchainService _blockchainService;
+        // private readonly IBlockchainService _blockchainService;
 
-        public SmartContractService(ISmartContractRepository contractRepository, IBlockchainService blockchainService)
+        public SmartContractService(ISmartContractRepository contractRepository)//, IBlockchainService blockchainService)
         {
             _contractRepository = contractRepository;
-            _blockchainService = blockchainService;
+            // _blockchainService = blockchainService;
         }
 
         public string GenerateContractCode(string name)
@@ -23,7 +23,7 @@ namespace Application.Services
         {
             return _contractRepository.GetContractCode(contractName);
         }
-
+        /*
         public async Task<string> DeployContractAsync(string contractName)
         {
             string contractCode = _contractRepository.GetContractCode(contractName);
@@ -31,12 +31,12 @@ namespace Application.Services
 
             return await _blockchainService.DeployContractAsync(contractCode);
         }
-
+        */
         public string GetDeployedContractAddress(string contractName)
         {
             return _contractRepository.GetDeployedContractAddress(contractName);
         }
-
+        /*
         public async Task<bool> TestContractAsync(string contractName)
         {
             return await _blockchainService.TestContractAsync(contractName);
@@ -46,5 +46,6 @@ namespace Application.Services
         {
             return await _blockchainService.GetContractInfoAsync(contractAddress);
         }
+        */
     }
 }

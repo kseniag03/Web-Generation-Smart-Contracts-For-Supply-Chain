@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["WebApp.styles.css"]" />
+
+    <!-- 🔹 Подключаем Prism.js для подсветки Solidity -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-solidity.min.js"></script>
+
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
@@ -17,6 +23,7 @@
     <Routes />
     <script src="_framework/blazor.web.js"></script>
     <script src="js/web3Interop.js"></script>
+    <script src="js/prismInterop.js"></script>
 </body>
 
 </html>

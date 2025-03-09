@@ -1,4 +1,19 @@
-﻿@inject HttpClient Http
+﻿@inject NavigationManager NavManager
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<h3>Generate Smart Contract</h3>
+
+<input @bind="contractName" placeholder="Enter contract name" />
+<button @onclick="GenerateContract">Generate</button>
+
+@if (!string.IsNullOrWhiteSpace(responseMessage))
+{
+    <div class="code-container">
+        <pre><code class="language-solidity">@responseMessage</code></pre>
+        <button class="copy-btn" @onclick="CopyToClipboard">📋 Copy</button>
+    </div>
+}
 
 @code {
     private string contractName = "";
@@ -6,11 +21,32 @@
 
     private async Task GenerateContract()
     {
-        responseMessage = await Http.GetStringAsync($"/api/contracts/generate?name={contractName}");
+        Console.WriteLine("Кнопка нажата!"); // Лог в консоль Blazor
+        responseMessage = "Processing...";
+
+        try
+        {
+            var fullUrl = $"{NavManager.BaseUri}api/contracts/generate?name={contractName}";
+            var result = await Http.GetFromJsonAsync<ContractResponse>(fullUrl);
+            responseMessage = $"Contract: {result.ContractName}, Code: {result.Code}";
+
+            // Ждём ререндеринга и вызываем Prism.js
+            await JS.InvokeVoidAsync("highlightPrism");
+        }
+        catch (Exception ex)
+        {
+            responseMessage = $"Ошибка: {ex.Message}";
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", responseMessage);
+    }
+
+    private class ContractResponse
+    {
+        public string ContractName { get; set; }
+        public string Code { get; set; }
     }
 }
-
-<h3>Generate Smart Contract</h3>
-<input @bind="contractName" placeholder="Enter contract name" />
-<button @onclick="GenerateContract">Generate</button>
-<p>@responseMessage</p>

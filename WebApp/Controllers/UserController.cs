@@ -23,16 +23,16 @@ namespace Web.Controllers
         /// </summary>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
-        {
+        {/*
             var user = new User { UserName = model.Username, WalletAddress = model.WalletAddress };
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (!result.Succeeded)
-                return BadRequest(result.Errors);
+                return BadRequest(result.Errors);*/
 
             return Ok(new { message = "User created successfully!" });
         }
-
+        /*
         /// <summary>
         /// Назначить роль пользователю
         /// </summary>
@@ -50,7 +50,7 @@ namespace Web.Controllers
                 return BadRequest(result.Errors);
 
             return Ok("Role assigned successfully.");
-        }
+        }*/
 
         /// <summary>
         /// Получить текущего пользователя
@@ -61,7 +61,7 @@ namespace Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-            return Ok(new { user.UserName, user.WalletAddress });
+            return Ok(new { user.Username, user.WalletAddress });
         }
     }
 }

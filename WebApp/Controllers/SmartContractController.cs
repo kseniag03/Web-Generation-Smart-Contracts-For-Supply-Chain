@@ -38,7 +38,7 @@ namespace WebApp.Controllers
 
             return Ok(new { contractName, code = contractCode });
         }
-
+        /*
         /// <summary>
         /// Деплоит контракт в блокчейн и возвращает его публичный адрес
         /// </summary>
@@ -51,7 +51,7 @@ namespace WebApp.Controllers
 
             return Ok(new { contractName, address = deploymentAddress });
         }
-
+        */
         /// <summary>
         /// Получает публичный адрес задеплоенного контракта
         /// </summary>
@@ -64,7 +64,7 @@ namespace WebApp.Controllers
 
             return Ok(new { contractName, address = contractAddress });
         }
-
+        /*
         /// <summary>
         /// Тестирует контракт, выполняя тестовые вызовы
         /// </summary>
@@ -90,5 +90,6 @@ namespace WebApp.Controllers
 
             return Ok(contractInfo);
         }
+        */
     }
 }

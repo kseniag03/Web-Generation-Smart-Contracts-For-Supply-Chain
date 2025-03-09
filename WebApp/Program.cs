@@ -1,12 +1,19 @@
 using WebApp.Components;
 using Utilities.DI;
+using Infrastructure.DI;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddInfrastructure();
+
 builder.Services.AddUtilities();
+builder.Services.AddHttpClient();
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 
 /* to communicate from other domain
 builder.Services.AddCors(options =>
@@ -27,12 +34,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+app.MapControllers();
 
 app.Run();
