@@ -59,6 +59,27 @@ h1:focus {
     text-align: start;
 }
 
+.main-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.left-panel {
+    flex: 2;
+}
+
+.right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
 .code-container {
     position: relative;
     background-color: #282c34;
@@ -85,6 +106,19 @@ h1:focus {
     border-radius: 5px;
 }
 
+.output-container {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border: 1px solid #555;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
 .copy-btn {
     position: absolute;
     top: 10px;
@@ -100,4 +134,32 @@ h1:focus {
 
 .copy-btn:hover {
     background: #4fa3d1;
+}
+
+.button-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.custom-btn {
+    background-color: #1A1A56;
+    color: white;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    padding: 8px 15px;
+    border-radius: 8px;
+    width: 110px;
+    text-align: center;
+    transition: background 0.2s ease-in-out;
+}
+
+.custom-btn:disabled {
+    background-color: #3A3A6A;
+    cursor: not-allowed;
+}
+
+.custom-btn:hover:not(:disabled) {
+    background-color: #2A2A7A;
 }
