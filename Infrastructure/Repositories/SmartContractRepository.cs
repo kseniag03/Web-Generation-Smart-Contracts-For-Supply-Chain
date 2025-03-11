@@ -22,7 +22,7 @@ namespace Infrastructure.Repositories
 
         public string GenerateContractCode(string contractName)
         {
-            var filePath = Path.Combine(_templatesPath, $"{contractName}.txt");
+            var filePath = Path.Combine(_templatesPath, $"{contractName}.sol");
 
             if (!File.Exists(filePath))
                 return $"Error: Contract template '{contractName}' not found";
