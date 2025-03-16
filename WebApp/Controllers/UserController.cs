@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Core.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Core.Entities;
-using Microsoft.AspNetCore.Identity.UI.V4.Pages.Account.Internal;
 
 namespace Web.Controllers
 {
@@ -17,22 +16,33 @@ namespace Web.Controllers
             _userManager = userManager;
             _roleManager = roleManager;
         }
+        /*
+         * 
+        
 
+        [HttpGet("get-role")]
+        [Authorize]
+        public IActionResult GetUserRole()
+        {
+            var role = _authService.GetUserRole(User.Identity.Name);
+            return Ok(role);
+        }
+        
         /// <summary>
         /// Создать нового пользователя
         /// </summary>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
-        {/*
+        {
             var user = new User { UserName = model.Username, WalletAddress = model.WalletAddress };
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (!result.Succeeded)
-                return BadRequest(result.Errors);*/
+                return BadRequest(result.Errors);
 
             return Ok(new { message = "User created successfully!" });
         }
-        /*
+
         /// <summary>
         /// Назначить роль пользователю
         /// </summary>
@@ -50,7 +60,27 @@ namespace Web.Controllers
                 return BadRequest(result.Errors);
 
             return Ok("Role assigned successfully.");
-        }*/
+        }
+
+        public async Task AssignRoleByOAuthAsync(Guid userId, string? walletAddress, string? githubId)
+        {
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null) throw new Exception("User not found");
+
+            bool hasGitHub = !string.IsNullOrEmpty(githubId);
+            bool hasMetaMask = !string.IsNullOrEmpty(walletAddress);
+
+            user.GitHubId = hasGitHub ? githubId : user.GitHubId;
+            user.WalletAddress = hasMetaMask ? walletAddress : user.WalletAddress;
+
+            // Определение роли
+            if (hasGitHub && hasMetaMask)
+                user.Role = RoleType.Deployer;
+            else if (hasGitHub)
+                user.Role = RoleType.Auditor;
+
+            await _dbContext.SaveChangesAsync();
+        }
 
         /// <summary>
         /// Получить текущего пользователя
@@ -63,5 +93,34 @@ namespace Web.Controllers
 
             return Ok(new { user.Username, user.WalletAddress });
         }
+
+        [HttpPost("auth/github")]
+        public async Task<IActionResult> LoginWithGitHub([FromBody] GitHubLoginRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.GitHubId == request.GitHubId);
+            if (user == null)
+            {
+                user = new User { GitHubId = request.GitHubId, Role = RoleType.Auditor };
+                _dbContext.Users.Add(user);
+                await _dbContext.SaveChangesAsync();
+            }
+
+            return Ok(new { Message = "Logged in as " + user.Role });
+        }
+
+        [HttpPost("auth/metamask")]
+        public async Task<IActionResult> LoginWithMetaMask([FromBody] MetaMaskLoginRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.WalletAddress == request.Wallet);
+
+            if (user == null)
+            {
+                user = new User { WalletAddress = request.Wallet, Role = RoleType.Deployer };
+                _dbContext.Users.Add(user);
+                await _dbContext.SaveChangesAsync();
+            }
+
+            return Ok(new { Message = "Logged in as " + user.Role });
+        }*/
     }
 }

@@ -59,6 +59,8 @@ h1:focus {
     text-align: start;
 }
 
+
+
 .main-container {
     display: flex;
     gap: 20px;
@@ -162,4 +164,59 @@ h1:focus {
 
 .custom-btn:hover:not(:disabled) {
     background-color: #2A2A7A;
+}
+
+
+
+
+
+
+.tab-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    background: #ddd;
+    color: black;
+    border-radius: 5px;
+}
+
+    .tab.active {
+        background: #007bff;
+        color: white;
+    }
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+    .auth-form input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+.auth-btn {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+}
+
+    .auth-btn.logout {
+        background: #dc3545;
+    }
+
+.error-message {
+    color: red;
 }

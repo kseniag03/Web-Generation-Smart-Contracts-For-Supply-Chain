@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSmartContractsApi", "TestSmartContractsApi\TestSmartContractsApi.csproj", "{1F95D139-CDAB-43B0-B8A6-852BBBA2B392}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApp", "WebApp\WebApp.csproj", "{01C46F7B-A176-4FCB-B628-5DC216AB7944}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{91DD0575-255E-409E-9647-2A5FE3254A0A}"
@@ -13,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Application\Application.csproj", "{62A8F918-34DC-47DB-91BA-6035EB3B504F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testing", "Testing\Testing.csproj", "{0A874C17-4DC5-4C7F-B5A5-78A058FB290D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Testing\Tests.csproj", "{0A874C17-4DC5-4C7F-B5A5-78A058FB290D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utilities", "Utilities\Utilities.csproj", "{FE9FB648-2AF0-4A85-9E79-DB8B0027E76C}"
 EndProject
@@ -23,10 +21,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{1F95D139-CDAB-43B0-B8A6-852BBBA2B392}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1F95D139-CDAB-43B0-B8A6-852BBBA2B392}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1F95D139-CDAB-43B0-B8A6-852BBBA2B392}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1F95D139-CDAB-43B0-B8A6-852BBBA2B392}.Release|Any CPU.Build.0 = Release|Any CPU
 		{01C46F7B-A176-4FCB-B628-5DC216AB7944}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{01C46F7B-A176-4FCB-B628-5DC216AB7944}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01C46F7B-A176-4FCB-B628-5DC216AB7944}.Release|Any CPU.ActiveCfg = Release|Any CPU

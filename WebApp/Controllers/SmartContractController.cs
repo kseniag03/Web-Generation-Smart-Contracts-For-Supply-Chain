@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Application.Services;
+using Microsoft.AspNetCore.Authorization;
 // using Core.Entities;
 
 namespace WebApp.Controllers
@@ -91,5 +92,20 @@ namespace WebApp.Controllers
             return Ok(contractInfo);
         }
         */
+
+        [Authorize(Roles = "Auditor, Deployer, Admin")]
+        [HttpPost("audit")]
+        public async Task<IActionResult> AuditContract()
+        {
+            return Ok("Running security audit...");
+        }
+
+        [Authorize(Roles = "Deployer, Admin")]
+        [HttpPost("deploy")]
+        public async Task<IActionResult> DeployContract()
+        {
+            return Ok("Deploying contract...");
+        }
+
     }
 }

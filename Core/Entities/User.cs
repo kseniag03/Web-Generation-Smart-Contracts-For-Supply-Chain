@@ -1,12 +1,30 @@
-﻿using Core.Enums;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Core.Enums;
 
-namespace Core.Entities
+namespace Core.Entities;
+
+public partial class User
 {
-    public class User
-    {
-        public int Id { get; set; }
-        public string Username { get; set; }
-        public string WalletAddress { get; set; }
-        public RoleEnum Role { get; set; }
-    }
+    public int IdUser { get; set; }
+
+    public string Login { get; set; } = null!;
+
+    public string? Firstname { get; set; }
+
+    public string? Lastname { get; set; }
+
+    public string? Email { get; set; }
+
+    public virtual ICollection<Actionlog> Actionlogs { get; set; } = new List<Actionlog>();
+
+    public virtual ICollection<Smartcontract> Smartcontracts { get; set; } = new List<Smartcontract>();
+
+    public virtual Userauth? Userauth { get; set; }
+
+    public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
+
+    public virtual ICollection<Role> IdRoles { get; set; } = new List<Role>();
+
+    [NotMapped]
+    public RoleType Role { get; set; } // Роль (enum)
 }

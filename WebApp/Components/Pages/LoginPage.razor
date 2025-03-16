@@ -1,0 +1,156 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+
+<h3>Authentication</h3>
+
+@if (!isAuthenticated)
+{
+    <div class="tab-container">
+        <button class="@GetTabClass(true)" @onclick="() => SetTab(true)">Sign In</button>
+        <button class="@GetTabClass(false)" @onclick="() => SetTab(false)">Sign Up</button>
+    </div>
+
+    @if (isSignIn)
+    {
+        <div class="auth-form">
+            <input type="text" placeholder="Username" @bind="loginModel.Username" />
+            <input type="password" placeholder="Password" @bind="loginModel.Password" />
+            <label>
+                <input type="checkbox" @bind="loginModel.RememberMe" /> Remember Me
+            </label>
+            <button class="auth-btn" @onclick="SignIn">Sign In</button>
+        </div>
+    }
+    else
+    {
+        <div class="auth-form">
+            <input type="text" placeholder="Username" @bind="registerModel.Username" />
+            <input type="password" placeholder="Password" @bind="registerModel.Password" />
+            <button class="auth-btn" @onclick="SignUp">Sign Up</button>
+            @if (!string.IsNullOrEmpty(registrationMessage))
+            {
+                <p class="error-message">@registrationMessage</p>
+            }
+        </div>
+    }
+}
+else
+{
+    <div class="user-info">
+        <h4>Welcome, @user.Username!</h4>
+        <p>Role: <strong>@user.Role</strong></p>
+
+        <button class="auth-btn" @onclick="ChangePassword">Change Password</button>
+
+        @if (user.Role == "tester")
+        {
+            <button class="auth-btn" @onclick="ConnectGitHub">Connect GitHub</button>
+        }
+
+        @if (user.Role == "auditor")
+        {
+            <button class="auth-btn" @onclick="ConnectMetaMask">Connect MetaMask</button>
+        }
+
+        <button class="auth-btn logout" @onclick="Logout">Log Out</button>
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isSignIn = true;
+    private string registrationMessage = "";
+
+    private LoginModel loginModel = new();
+    private RegisterModel registerModel = new();
+    private UserModel user = new();
+
+    private void SetTab(bool signIn)
+    {
+        isSignIn = signIn;
+        registrationMessage = "";
+    }
+
+    private string GetTabClass(bool signInTab) => isSignIn == signInTab ? "tab active" : "tab";
+
+    private async Task SignIn()
+    {
+        var fullUrl = $"{NavManager.BaseUri}api/auth/login";
+
+        var response = await Http.PostAsJsonAsync(fullUrl, loginModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            user = await response.Content.ReadFromJsonAsync<UserModel>();
+            isAuthenticated = true;
+        }
+    }
+
+    private async Task SignUp()
+    {
+        var response = await Http.PostAsJsonAsync("/api/auth/register", registerModel);
+        if (!response.IsSuccessStatusCode)
+        {
+            registrationMessage = "Username already exists.";
+            return;
+        }
+        user = await response.Content.ReadFromJsonAsync<UserModel>();
+        isAuthenticated = true;
+    }
+
+    private async Task ChangePassword()
+    {
+        await Http.PostAsync("/api/auth/change-password", null);
+    }
+
+    private async Task ConnectGitHub()
+    {
+        var response = await Http.PostAsync("/api/auth/link-github", null);
+        if (response.IsSuccessStatusCode)
+        {
+            user.Role = "auditor";
+        }
+    }
+
+    private async Task ConnectMetaMask()
+    {
+        var accounts = await JS.InvokeAsync<string[]>("myWeb3Functions.connectMetaMask");
+        if (accounts.Length > 0)
+        {
+            var response = await Http.PostAsJsonAsync("/api/auth/link-metamask", new { Address = accounts[0] });
+            if (response.IsSuccessStatusCode)
+            {
+                user.Role = "deployer";
+            }
+        }
+    }
+
+    private async Task Logout()
+    {
+        await Http.PostAsync("/api/auth/logout", null);
+        isAuthenticated = false;
+        user = new UserModel();
+    }
+
+    private class LoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+        public bool RememberMe { get; set; }
+    }
+
+    private class RegisterModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    private class UserModel
+    {
+        public string Username { get; set; } = "";
+        public string Role { get; set; } = "user";
+    }
+}

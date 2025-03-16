@@ -1,6 +1,6 @@
 ﻿namespace Core.Enums
 {
-    public enum RoleEnum
+    public enum RoleType
     {
         User = 0,
         Tester = 1,

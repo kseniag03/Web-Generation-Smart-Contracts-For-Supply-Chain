@@ -1,12 +1,11 @@
 // wwwroot/js/web3Interop.js
 
 window.myWeb3Functions = {
-    connectMetaMask: function () {
+    connectMetaMask: async function () {
         if (typeof window.ethereum !== "undefined") {
-            // Запрос аккаунтов пользователя через MetaMask
-            return window.ethereum.request({ method: 'eth_requestAccounts' });
+            return await window.ethereum.request({ method: 'eth_requestAccounts' });
         } else {
-            return Promise.reject("MetaMask не обнаружен");
+            return Promise.reject("MetaMask is not installed");
         }
     },
     getSelectedAccount: function () {
