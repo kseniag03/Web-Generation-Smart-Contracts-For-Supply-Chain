@@ -1,8 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore;
-using Core.Entities;
-
-namespace Infrastructure.Data
+﻿namespace Infrastructure.Data
 {/*
     public class UserConfiguration : IEntityTypeConfiguration<User>
     {

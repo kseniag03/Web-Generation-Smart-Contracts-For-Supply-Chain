@@ -18,6 +18,11 @@ namespace Infrastructure.Repositories
             _passwordHasher = new PasswordHasher<User>();
         }
 
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == username);
+        }
+
         public async Task<bool> RegisterUser(string login, string email, string password)
         {
             if (await _dbContext.Users.AnyAsync(u => u.Login == login))

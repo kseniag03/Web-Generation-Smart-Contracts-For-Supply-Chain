@@ -6,6 +6,10 @@
 # env data
 .env
 
+# chrome and chromedriver exe
+Tests/chrome-win64/
+Tests/chromedriver-win64/
+
 # User-specific files
 *.rsuser
 *.suo
