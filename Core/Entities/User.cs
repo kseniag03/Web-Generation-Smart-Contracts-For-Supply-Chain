@@ -24,7 +24,4 @@ public partial class User
     public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
 
     public virtual ICollection<Role> IdRoles { get; set; } = new List<Role>();
-
-    [NotMapped]
-    public RoleType Role { get; set; } // Роль (enum)
 }

@@ -19,15 +19,46 @@ namespace WebApp.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto login)
         {
-            var token = await _authService.LoginUser(login.Username, login.Password);
-            return token is not null ? Ok(token) : Unauthorized("Invalid credentials");
+            try
+            {
+                var token = await _authService.LoginUser(login.Username, login.Password);
+
+                if (token is null)
+                {
+                    return Unauthorized("Invalid credentials");
+                }
+
+                return Ok(token);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Login error: {ex.Message}");
+
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto register)
         {
-            var result = await _authService.RegisterUser(register.Username, register.Password);
-            return result ? Ok("User registered") : BadRequest("Registration failed");
+            try
+            {
+                var result = await _authService.RegisterUser(register.Username, register.Password);
+
+                if (!result)
+                {
+                    BadRequest("Registration failed");
+                }
+
+                return Ok("User registered");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Login error: {ex.Message}");
+
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
+
         }
 
         [HttpGet("check-username")]

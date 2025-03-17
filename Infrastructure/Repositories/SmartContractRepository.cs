@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using Application.DTOs;
 using Core.Interfaces;
 using Microsoft.Extensions.Configuration;
 
@@ -21,16 +22,12 @@ namespace Infrastructure.Repositories
             _templatesPath = Path.Combine(_solutionDirectory.Value, tempatepath);
         }
 
-        public string GenerateContractCode(string contractName)
+        public string GenerateContractCode(string contractName, string appArea, string uintType, bool enableEvents, bool includeVoid)
         {
             var filePath = Path.Combine(_templatesPath, $"template-test.sol");
 
             if (!File.Exists(filePath))
-                return $"Error: Contract template for '{contractName}' not found";
-
-            string uintType = "uint8";
-            bool includeEvents = false;
-            bool includeVoid = false;
+                return $"Error: Contract template for '{appArea}' not found";
 
             var template = File.ReadAllText(filePath);
             var processedContract = template;
@@ -49,7 +46,7 @@ namespace Infrastructure.Repositories
             // remove or keep the content between the tags
             processedContract = Regex.Replace(processedContract,
                 @"\{EVENTS_OPTIONAL\}([\s\S]*?)\{EVENTS_OPTIONAL\}",
-                includeEvents ? "$1" : "",
+                enableEvents ? "$1" : "",
                 RegexOptions.Multiline);
 
             processedContract = Regex.Replace(processedContract,

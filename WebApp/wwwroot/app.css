@@ -90,8 +90,24 @@ h1:focus {
     overflow: auto;
     max-width: 800px;
     max-height: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     width: 100%;
     margin-top: 10px;
+}
+
+.code-editor {
+    width: 100%;
+    min-height: 200px;
+    height: auto;
+    resize: vertical;
+    font-family: monospace;
+    padding: 8px;
+    background-color: #2b2b2b;
+    color: white;
+    border: 1px solid #444;
+    border-radius: 4px;
 }
 
 .code-box {

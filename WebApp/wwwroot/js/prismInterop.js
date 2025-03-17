@@ -14,3 +14,9 @@ window.highlightPrism = function () {
     }, 50);
 };
 
+window.reRenderCode = (element) => {
+    if (element) {
+        element.innerHTML = element.innerHTML;
+        Prism.highlightAll();
+    }
+};

@@ -1,4 +1,5 @@
 ﻿
+using Application.DTOs;
 using Application.Services;
 using Core.Interfaces;
 using Moq;
@@ -22,11 +23,19 @@ namespace Tests.ApplicationTests
             // Arrange
             var contractName = "TestContract";
             var expectedCode = $"generated code for {contractName}";
-            _contractRepositoryMock.Setup(repo => repo.GenerateContractCode(contractName))
+            _contractRepositoryMock.Setup(repo => repo.GenerateContractCode(contractName, "area", "uint8", false, false))
                 .Returns(expectedCode);
 
+            var dto = new ContractParamsDto { 
+                ContractName = contractName,
+                ApplicationArea = "area",
+                UintType = "uint8",
+                EnableEvents = false,
+                IncludeVoidLabel = false,
+            };
+
             // Act
-            var result = _smartContractService.GenerateContractCode(contractName);
+            var result = _smartContractService.GenerateContractCode(dto);
 
             // Assert
             Assert.Equal(expectedCode, result);

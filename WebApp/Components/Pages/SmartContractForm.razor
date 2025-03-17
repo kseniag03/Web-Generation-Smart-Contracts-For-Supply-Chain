@@ -20,7 +20,7 @@
                 }
                 else
                 {
-                    <pre><code class="language-solidity">@responseMessage</code></pre>
+                    <pre @ref="codeContainer"><code class="language-solidity">@responseMessage</code></pre>
                 }
                 <button class="copy-btn" @onclick="CopyToClipboard">📋 Copy</button>
             </div>
@@ -49,8 +49,8 @@
 
         <!-- Выбор области применения -->
         <label>Area of Application:</label>
-        <select @bind="selectedApplication">
-            @foreach (var app in applicationOptions)
+        <select @bind="selectedApplicationArea">
+            @foreach (var app in applicationAreaOptions)
             {
                 <option value="@app">@app</option>
             }
@@ -76,34 +76,62 @@
 </div>
 
 @code {
-    private string contractName = "";
+    private ElementReference codeContainer;
     private string responseMessage = "";
+    private string contractName = "";
 
     private bool isEditing = false;
     private string editButtonText = "Edit";
     private List<string> testingOutput = new();
 
-    private string selectedApplication = "IoT";
+    private string selectedApplicationArea = "IoT";
     private bool enableEvents = true;
     private string selectedUintType = "uint256";
     private bool includeVoidLabel = true;
 
-    private readonly List<string> applicationOptions = new() { "IoT", "Pharmaceutics", "Metallurgy" };
+    private readonly List<string> applicationAreaOptions = new() { "IoT", "Pharmaceutics", "Metallurgy" };
     private readonly List<string> uintOptions = new() { "uint8", "uint16", "uint32", "uint64", "uint128", "uint256" };
 
     private async Task GenerateContract()
     {
         Console.WriteLine("Кнопка нажата!");
-        responseMessage = "Processing...";
+
+        isEditing = true;
         testingOutput.Clear();
+        responseMessage = "Processing...";
+        StateHasChanged();
+
+        var contractParams = new ContractParams
+        {
+            ContractName = contractName,
+            ApplicationArea = selectedApplicationArea,
+            UintType = selectedUintType,
+            EnableEvents = enableEvents,
+            IncludeVoidLabel = includeVoidLabel
+        };
 
         try
         {
-            var fullUrl = $"{NavManager.BaseUri}api/contracts/generate?name={contractName}";
-            var result = await Http.GetFromJsonAsync<ContractResponse>(fullUrl);
-            responseMessage = $"Contract: {result.ContractName}, Code: {result.Code}";
+            var result = await Http.PostAsJsonAsync($"{NavManager.BaseUri}api/contracts/generate", contractParams);
 
-            await JS.InvokeVoidAsync("highlightPrism");
+            if (result.IsSuccessStatusCode)
+            {
+                var contractResponse = await result.Content.ReadFromJsonAsync<ContractResponse>();
+
+                isEditing = false;
+                await Task.Delay(50);
+
+                responseMessage = $"Contract: {contractResponse.ContractName}, Code: {contractResponse.Code}";
+                StateHasChanged();
+
+                await JS.InvokeVoidAsync("highlightPrism");
+                await JS.InvokeVoidAsync("reRenderCode", codeContainer);
+
+            }
+            else
+            {
+                responseMessage = "Error generating contract.";
+            }
         }
         catch (Exception ex)
         {
@@ -127,7 +155,7 @@
         testingOutput.Add("Test 3: ✘ Failed (Gas exceeded)");
     }
 
-    private void ToggleEdit()
+    private async Task ToggleEdit()
     {
         isEditing = !isEditing;
         editButtonText = isEditing ? "Save" : "Edit";
@@ -135,6 +163,9 @@
         if (!isEditing)
         {
             Console.WriteLine("Edited contract saved: " + responseMessage);
+
+            await Task.Delay(50);
+            await JS.InvokeVoidAsync("highlightPrism");
         }
     }
 
@@ -142,5 +173,14 @@
     {
         public string ContractName { get; set; }
         public string Code { get; set; }
+    }
+
+    private class ContractParams
+    {
+        public string ContractName { get; set; }
+        public string ApplicationArea { get; set; }
+        public string UintType { get; set; }
+        public bool EnableEvents { get; set; }
+        public bool IncludeVoidLabel { get; set; }
     }
 }

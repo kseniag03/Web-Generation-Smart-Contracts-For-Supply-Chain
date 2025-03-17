@@ -14,15 +14,12 @@ namespace Utilities.DI
             else
                 services.AddSingleton<ICommandExecutor, UnixCommandExecutor>();
 
-            /*
             services.AddScoped<IHardhatExecutor, HardhatExecutor>();
             services.AddScoped<IFoundryExecutor, FoundryExecutor>();
             services.AddScoped<ISlitherExecutor, SlitherExecutor>();
             services.AddScoped<IMythrilExecutor, MythrilExecutor>();
-            */
 
             return services;
         }
     }
-
 }

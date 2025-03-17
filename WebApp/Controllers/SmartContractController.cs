@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Application.Services;
 using Microsoft.AspNetCore.Authorization;
+using Application.DTOs;
 // using Core.Entities;
 
 namespace WebApp.Controllers
@@ -20,11 +21,11 @@ namespace WebApp.Controllers
         /// <summary>
         /// Генерирует код смарт-контракта на основе шаблона
         /// </summary>
-        [HttpGet("generate")]
-        public IActionResult GenerateContract(string name)
+        [HttpPost("generate")]
+        public IActionResult GenerateContract(ContractParamsDto paramsDto)
         {
-            string contractCode = _contractService.GenerateContractCode(name);
-            return Ok(new { contractName = name, code = contractCode });
+            string contractCode = _contractService.GenerateContractCode(paramsDto);
+            return Ok(new { contractName = paramsDto.ContractName, code = contractCode });
         }
 
         /// <summary>

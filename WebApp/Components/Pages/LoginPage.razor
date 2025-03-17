@@ -40,7 +40,7 @@
 else
 {
     <div class="user-info">
-        <h4>Welcome, @user.Username!</h4>
+        <h4>Welcome, @user.Login!</h4>
         <p>Role: <strong>@user.Role</strong></p>
 
         <button class="auth-btn" @onclick="ChangePassword">Change Password</button>
@@ -150,7 +150,7 @@ else
 
     private class UserModel
     {
-        public string Username { get; set; } = "";
-        public string Role { get; set; } = "user";
+        public string Login { get; set; } = "";
+        public string Role { get; set; } = "User";
     }
 }

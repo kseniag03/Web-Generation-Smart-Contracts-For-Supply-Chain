@@ -1,4 +1,6 @@
-﻿using Core.Entities;
+﻿using Application.DTOs;
+using Application.Mappings;
+using Core.Entities;
 using Core.Interfaces;
 
 namespace Application.Services
@@ -17,9 +19,11 @@ namespace Application.Services
             return await _authRepository.RegisterUser(username, email, password);
         }
 
-        public async Task<User?> LoginUser(string username, string password)
+        public async Task<UserDto?> LoginUser(string username, string password)
         {
-            return await _authRepository.LoginUser(username, password);
+            var user = await _authRepository.LoginUser(username, password);
+
+            return user?.ToDto();
         }
 
         public async Task<bool> LinkGitHub(string username, string githubId)

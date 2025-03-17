@@ -36,10 +36,11 @@ namespace Infrastructure.Repositories
                 Login = login,
                 Firstname = string.Empty,
                 Lastname = string.Empty,
-                Email = email,
-                Role = RoleType.Tester,             // По умолчанию
+                Email = email
                 // GitHubId = null              need to add
             };
+
+            // newUser.IdRoles.Add(1);
 
             var passwordHash = _passwordHasher.HashPassword(newUser, password);
 
@@ -57,9 +58,12 @@ namespace Infrastructure.Repositories
 
         public async Task<User?> LoginUser(string login, string password)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
+            var user = await _dbContext.Users
+                .Include(u => u.Userauth)
+                .Include(u => u.IdRoles)
+                .FirstOrDefaultAsync(u => u.Login == login);
 
-            if (user == null)
+            if (user == null || user.Userauth == null)
             {
                 return null;
             }

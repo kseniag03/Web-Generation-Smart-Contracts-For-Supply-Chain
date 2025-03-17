@@ -1,4 +1,5 @@
 ﻿// using Core.Entities;
+using Application.DTOs;
 using Core.Interfaces;
 
 namespace Application.Services
@@ -14,9 +15,14 @@ namespace Application.Services
             // _blockchainService = blockchainService;
         }
 
-        public string GenerateContractCode(string name)
+        public string GenerateContractCode(ContractParamsDto paramsDto)
         {
-            return _contractRepository.GenerateContractCode(name);
+            return _contractRepository.GenerateContractCode(
+                paramsDto.ContractName,
+                paramsDto.ApplicationArea,
+                paramsDto.UintType,
+                paramsDto.EnableEvents,
+                paramsDto.IncludeVoidLabel);
         }
 
         public string GetContractCode(string contractName)
