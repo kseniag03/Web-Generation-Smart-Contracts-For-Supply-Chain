@@ -2,6 +2,6 @@
 {
     public class GithubDto
     {
-        public string GithubUsername { get; set; }
+        public string GithubLogin { get; set; }
     }
 }

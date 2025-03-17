@@ -16,7 +16,7 @@
     @if (isSignIn)
     {
         <div class="auth-form">
-            <input type="text" placeholder="Username" @bind="loginModel.Username" />
+            <input type="text" placeholder="Username" @bind="loginModel.Login" />
             <input type="password" placeholder="Password" @bind="loginModel.Password" />
             <label>
                 <input type="checkbox" @bind="loginModel.RememberMe" /> Remember Me
@@ -27,8 +27,10 @@
     else
     {
         <div class="auth-form">
-            <input type="text" placeholder="Username" @bind="registerModel.Username" />
+            <input type="text" placeholder="Username" @bind="registerModel.Login" />
             <input type="password" placeholder="Password" @bind="registerModel.Password" />
+            <input type="email" placeholder="Email (optional)" @bind="registerModel.Email" />
+
             <button class="auth-btn" @onclick="SignUp">Sign Up</button>
             @if (!string.IsNullOrEmpty(registrationMessage))
             {
@@ -79,7 +81,6 @@ else
     private async Task SignIn()
     {
         var fullUrl = $"{NavManager.BaseUri}api/auth/login";
-
         var response = await Http.PostAsJsonAsync(fullUrl, loginModel);
 
         if (response.IsSuccessStatusCode)
@@ -91,12 +92,15 @@ else
 
     private async Task SignUp()
     {
-        var response = await Http.PostAsJsonAsync("/api/auth/register", registerModel);
+        var fullUrl = $"{NavManager.BaseUri}api/auth/register";
+        var response = await Http.PostAsJsonAsync(fullUrl, registerModel);
+
         if (!response.IsSuccessStatusCode)
         {
             registrationMessage = "Username already exists.";
             return;
         }
+
         user = await response.Content.ReadFromJsonAsync<UserModel>();
         isAuthenticated = true;
     }
@@ -137,15 +141,16 @@ else
 
     private class LoginModel
     {
-        public string Username { get; set; } = "";
+        public string Login { get; set; } = "";
         public string Password { get; set; } = "";
         public bool RememberMe { get; set; }
     }
 
     private class RegisterModel
     {
-        public string Username { get; set; } = "";
+        public string Login { get; set; } = "";
         public string Password { get; set; } = "";
+        public string? Email { get; set; }
     }
 
     private class UserModel

@@ -14,31 +14,33 @@ namespace Application.Services
             _authRepository = authRepository;
         }
 
-        public async Task<bool> RegisterUser(string username, string password, string? email = null)
+        public async Task<UserDto?> RegisterUser(string login, string password, string? email)
         {
-            return await _authRepository.RegisterUser(username, email, password);
-        }
-
-        public async Task<UserDto?> LoginUser(string username, string password)
-        {
-            var user = await _authRepository.LoginUser(username, password);
+            var user = await _authRepository.RegisterUser(login, password, email);
 
             return user?.ToDto();
         }
 
-        public async Task<bool> LinkGitHub(string username, string githubId)
+        public async Task<UserDto?> LoginUser(string login, string password)
         {
-            return await _authRepository.LinkGitHub(username, githubId);
+            var user = await _authRepository.LoginUser(login, password);
+
+            return user?.ToDto();
         }
 
-        public async Task<bool> LinkMetaMask(string username, string walletAddress)
+        public async Task<bool> LinkGitHub(string login, string githubId)
         {
-            return await _authRepository.LinkMetaMask(username, walletAddress);
+            return await _authRepository.LinkGitHub(login, githubId);
         }
 
-        public async Task<bool> ChangePassword(string username, string oldPassword, string newPassword)
+        public async Task<bool> LinkMetaMask(string login, string walletAddress)
         {
-            return await _authRepository.ChangePassword(username, oldPassword, newPassword);
+            return await _authRepository.LinkMetaMask(login, walletAddress);
+        }
+
+        public async Task<bool> ChangePassword(string login, string oldPassword, string newPassword)
+        {
+            return await _authRepository.ChangePassword(login, oldPassword, newPassword);
         }
 
         private bool IsAuthorized(string userRole, string requiredRole)

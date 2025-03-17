@@ -18,15 +18,15 @@ namespace Infrastructure.Repositories
             _passwordHasher = new PasswordHasher<User>();
         }
 
-        public async Task<User?> GetByUsernameAsync(string username)
+        public async Task<User?> GetByUsernameAsync(string login)
         {
-            return await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == username);
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
         }
 
-        public async Task<bool> RegisterUser(string login, string email, string password)
+        public async Task<User?> RegisterUser(string login, string password, string? email)
         {
             if (await _dbContext.Users.AnyAsync(u => u.Login == login))
-                return false; // Логин уже занят
+                return null; // Логин уже занят
 
             var id = _dbContext.Users.Count() + 1;
 
@@ -40,8 +40,6 @@ namespace Infrastructure.Repositories
                 // GitHubId = null              need to add
             };
 
-            // newUser.IdRoles.Add(1);
-
             var passwordHash = _passwordHasher.HashPassword(newUser, password);
 
             newUser.Userauth = new Userauth
@@ -50,10 +48,19 @@ namespace Infrastructure.Repositories
                 PasswordHash = passwordHash
             };
 
+            var testerRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.IdRole == (int)RoleType.Tester);
+
+            if (testerRole != null)
+            {
+                newUser.IdRoles.Add(testerRole);
+            }
+
+            _dbContext.Users.Add(newUser);
+
             _dbContext.Users.Add(newUser);
             await _dbContext.SaveChangesAsync();
 
-            return true;
+            return newUser;
         }
 
         public async Task<User?> LoginUser(string login, string password)
@@ -61,7 +68,7 @@ namespace Infrastructure.Repositories
             var user = await _dbContext.Users
                 .Include(u => u.Userauth)
                 .Include(u => u.IdRoles)
-                .FirstOrDefaultAsync(u => u.Login == login);
+                .FirstOrDefaultAsync(u => u.Login == login || u.Email == login);
 
             if (user == null || user.Userauth == null)
             {

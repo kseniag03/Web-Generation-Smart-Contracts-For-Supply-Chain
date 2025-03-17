@@ -21,7 +21,7 @@ namespace WebApp.Controllers
         {
             try
             {
-                var token = await _authService.LoginUser(login.Username, login.Password);
+                var token = await _authService.LoginUser(login.Login, login.Password);
 
                 if (token is null)
                 {
@@ -43,14 +43,14 @@ namespace WebApp.Controllers
         {
             try
             {
-                var result = await _authService.RegisterUser(register.Username, register.Password);
+                var token = await _authService.RegisterUser(register.Login, register.Password, register.Email);
 
-                if (!result)
+                if (token is null)
                 {
                     BadRequest("Registration failed");
                 }
 
-                return Ok("User registered");
+                return Ok(token);
             }
             catch (Exception ex)
             {
@@ -72,7 +72,7 @@ namespace WebApp.Controllers
         [Authorize]
         public async Task<IActionResult> LinkGithub([FromBody] GithubDto github)
         {
-            var success = await _authService.LinkGitHub(User.Identity.Name, github.GithubUsername);
+            var success = await _authService.LinkGitHub(User.Identity.Name, github.GithubLogin);
             return success ? Ok("GitHub linked") : BadRequest("GitHub linking failed");
         }
 
