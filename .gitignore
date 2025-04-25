@@ -10,6 +10,8 @@
 Tests/chrome-win64/
 Tests/chromedriver-win64/
 
+/WebApp/Properties/launchSettings.json
+
 # User-specific files
 *.rsuser
 *.suo
