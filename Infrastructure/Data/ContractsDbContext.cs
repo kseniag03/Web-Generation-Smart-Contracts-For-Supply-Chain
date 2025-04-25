@@ -59,6 +59,10 @@ namespace Infrastructure.Data
 
             modelBuilder.Entity<Role>(entity =>
             {
+                entity.HasKey(e => e.IdRole);
+                entity.Property(e => e.IdRole)
+                    .UseIdentityAlwaysColumn();
+
                 entity.HasKey(e => e.IdRole).HasName("roles_pkey");
 
                 entity.ToTable("roles");
@@ -108,6 +112,10 @@ namespace Infrastructure.Data
 
             modelBuilder.Entity<User>(entity =>
             {
+                entity.HasKey(e => e.IdUser);
+                entity.Property(e => e.IdUser)
+                    .UseIdentityAlwaysColumn();
+
                 entity.HasKey(e => e.IdUser).HasName("users_pkey");
 
                 entity.ToTable("users");
@@ -129,6 +137,8 @@ namespace Infrastructure.Data
                 entity.Property(e => e.Login)
                     .HasMaxLength(50)
                     .HasColumnName("login");
+                entity.Property(e => e.GitHubId)
+                    .HasColumnName("github_id");
 
                 entity.HasMany(d => d.IdRoles).WithMany(p => p.IdUsers)
                     .UsingEntity<Dictionary<string, object>>(
@@ -166,6 +176,10 @@ namespace Infrastructure.Data
 
             modelBuilder.Entity<Wallet>(entity =>
             {
+                entity.HasKey(e => e.IdWallet);
+                entity.Property(e => e.IdWallet)
+                    .UseIdentityAlwaysColumn();
+
                 entity.HasKey(e => e.IdWallet).HasName("wallet_pkey");
 
                 entity.ToTable("wallet");

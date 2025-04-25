@@ -7,5 +7,7 @@
         public string UintType { get; set; }
         public bool EnableEvents { get; set; }
         public bool IncludeVoidLabel { get; set; }
+        public string TargetOs { get; set; }
+
     }
 }

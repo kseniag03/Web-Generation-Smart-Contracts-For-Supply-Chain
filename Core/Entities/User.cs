@@ -1,7 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using Core.Enums;
-
-namespace Core.Entities;
+﻿namespace Core.Entities;
 
 public partial class User
 {
@@ -14,6 +11,8 @@ public partial class User
     public string? Lastname { get; set; }
 
     public string? Email { get; set; }
+
+    public string? GitHubId { get; set; }
 
     public virtual ICollection<Actionlog> Actionlogs { get; set; } = new List<Actionlog>();
 

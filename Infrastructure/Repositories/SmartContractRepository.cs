@@ -1,37 +1,41 @@
-﻿using System.Text.RegularExpressions;
-using Application.DTOs;
+﻿using System.Text.Json;
+using System.Text.RegularExpressions;
 using Core.Interfaces;
+using Core.UseCases;
+using Infrastructure.Repositories.Helpers;
 using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Repositories
 {
     public class SmartContractRepository : ISmartContractRepository
     {
-        private static readonly Lazy<string> _solutionDirectory = new(() => FindSolutionDirectory());
+        private readonly string _solutionDirectory;
         private readonly string _templatesPath;
 
         public SmartContractRepository(IConfiguration configuration)
         {
             var tempatepath = configuration["ContractTemplatesPath"];
 
-            if (string.IsNullOrEmpty(_solutionDirectory.Value) || string.IsNullOrEmpty(tempatepath))
+            if (string.IsNullOrEmpty(tempatepath))
             {
                 throw new ArgumentException("Solution directory or template path is not found.");
             }
 
-            _templatesPath = Path.Combine(_solutionDirectory.Value, tempatepath);
+            _solutionDirectory = SolutionPathHelper.GetSolutionRoot(configuration);
+            _templatesPath = Path.Combine(_solutionDirectory, tempatepath);
         }
 
-        public string GenerateContractCode(string contractName, string appArea, string uintType, bool enableEvents, bool includeVoid)
+        public string GenerateContractCode(string contractName, string appArea, string uintType, bool enableEvents, bool includeVoid, string instancePath)
         {
-            var filePath = Path.Combine(_templatesPath, $"template-test.sol");
+            var filePath = Path.Combine(_templatesPath, "template-contract.sol");
 
             if (!File.Exists(filePath))
-                return $"Error: Contract template for '{appArea}' not found";
+            {
+                return $"Error: Contract template for '{appArea}' not found in {filePath}";
+            }
 
             var template = File.ReadAllText(filePath);
             var processedContract = template;
-
             var replacements = new Dictionary<string, string>
             {
                 { @"\{CONTRACT_NAME\}", contractName },
@@ -54,23 +58,75 @@ namespace Infrastructure.Repositories
                 includeVoid ? "$1" : "",
                 RegexOptions.Multiline);
 
+            var contractPath = Path.Combine(instancePath, "contracts");
+
+            Directory.CreateDirectory(contractPath);
+
+            var contractFilePath = Path.Combine(contractPath, $"{contractName}.sol");
+
+            File.WriteAllText(contractFilePath, processedContract);
+
+            GenerateTestScript(contractName, enableEvents, includeVoid, instancePath);
+            // GenerateDeployScript(contractName, contractName.ToLower());
+
             return processedContract;
         }
 
-        public string GetContractCode(string contractName) => $"contact {contractName} code: WANTED";
+        public string GetContractCode(string contractName, string instancePath) => $"contact {contractName} code: WANTED";
 
-        public string GetDeployedContractAddress(string contractName) => $"address of deployed contact {contractName}: WANTED";
+        public string GetDeployedContractAddress(string contractName, string instancePath) => $"address of deployed contact {contractName}: WANTED";
 
-        private static string FindSolutionDirectory()
+        public DeploySmartContractEntities? GetContractAbiBytecode(string contractName, string instancePath)
         {
-            var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+            var path = Path.Combine(instancePath, "artifacts", "contracts", $"{contractName}.sol", $"{contractName}.json");
 
-            while (dir is not null && !dir.GetFiles("*.sln").Any())
+            if (!File.Exists(path))
             {
-                dir = dir.Parent;
+                return null;
             }
 
-            return dir?.FullName ?? throw new InvalidOperationException("Solution directory not found.");
+            var json = File.ReadAllText(path);
+            var parsed = JsonDocument.Parse(json).RootElement;
+
+            return new DeploySmartContractEntities
+            {
+                Abi = parsed.GetProperty("abi"),
+                Bytecode = parsed.GetProperty("bytecode").GetString()?.TrimStart('0', 'x')
+            };
+        }
+
+        private void GenerateTestScript(string contractName, bool enableEvents, bool includeVoid, string instancePath)
+        {
+            var filePath = Path.Combine(_templatesPath, "template-test.js");
+
+            if (!File.Exists(filePath))
+            {
+                Console.WriteLine("Error: Test template not found.");
+
+                return;
+            }
+
+            var template = File.ReadAllText(filePath);
+            var processedScript = Regex.Replace(template, @"\{CONTRACT_NAME\}", contractName);
+
+            // remove or keep the content between the tags
+            processedScript = Regex.Replace(processedScript,
+                @"\{EVENTS_OPTIONAL\}([\s\S]*?)\{EVENTS_OPTIONAL\}",
+                enableEvents ? "$1" : "",
+                RegexOptions.Multiline);
+
+            processedScript = Regex.Replace(processedScript,
+                @"\{VOID_OPTIONAL\}([\s\S]*?)\{VOID_OPTIONAL\}",
+                includeVoid ? "$1" : "",
+                RegexOptions.Multiline);
+
+            var testPath = Path.Combine(instancePath, "test");
+
+            Directory.CreateDirectory(testPath);
+
+            var scriptFilePath = Path.Combine(testPath, $"test_{contractName}.js");
+
+            File.WriteAllText(scriptFilePath, processedScript);
         }
     }
 }

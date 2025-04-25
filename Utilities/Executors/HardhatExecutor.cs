@@ -1,32 +1,41 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Configuration;
 using Utilities.Interfaces;
 
 namespace Utilities.Executors
 {
     public class HardhatExecutor : IHardhatExecutor
     {
-        private readonly ICommandExecutor _commandExecutor;
+        private readonly string _baseDir = AppContext.BaseDirectory;
+        private readonly ICommandExecutor _cmd;
 
-        public HardhatExecutor(ICommandExecutor commandExecutor)
+        public HardhatExecutor(IConfiguration config, ICommandExecutor cmd)
         {
-            _commandExecutor = commandExecutor;
+            _cmd = cmd;
         }
 
-        public Task<string> DeployContract(string network, string args)
+        public Task<string> CompileContract(string instancePath)
         {
-            return _commandExecutor.ExecuteCommandAsync($"npx hardhat run deploy --network {network}", args);
+            var script = GetAbsolutePath("Utilities/run-hardhat.sh");
+
+            return _cmd.ExecuteCommandAsync(
+                "/bin/bash",
+                $"{script} compile {instancePath}",
+                _baseDir
+            );
         }
 
-        public Task<string> TestContract(string command, string args)
+        public Task<string> TestContract(string instancePath)
         {
-            return _commandExecutor.ExecuteCommandAsync("npx hardhat test", args);
+            var script = GetAbsolutePath("Utilities/run-hardhat.sh");
+
+            return _cmd.ExecuteCommandAsync(
+                "/bin/bash",
+                $"{script} test {instancePath}",
+                _baseDir
+            );
         }
 
-        public Task<string> VerifyContract(string network, string args)
-        {
-            const string API_KEY = "Some_api_key"; // replace with one from config or .env file
-
-            return _commandExecutor.ExecuteCommandAsync($"npx hardhat --network {network} etherscan-verify --api-key {API_KEY}", args);
-        }
+        private string GetAbsolutePath(string relativePath) =>
+            Path.Combine(_baseDir, relativePath);
     }
 }

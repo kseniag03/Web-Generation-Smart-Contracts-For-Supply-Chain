@@ -1,6 +1,6 @@
 ﻿@page "/login"
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IHttpClientFactory ClientFactory
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
 
@@ -57,6 +57,21 @@ else
             <button class="auth-btn" @onclick="ConnectMetaMask">Connect MetaMask</button>
         }
 
+        @if (string.IsNullOrEmpty(user.GitHubId))
+        {
+            <button class="auth-btn" @onclick="ConnectGitHub">Connect GitHub</button>
+        }
+
+        @if (string.IsNullOrEmpty(user.WalletAddress))
+        {
+            <button class="auth-btn" @onclick="ConnectMetaMask">Connect MetaMask</button>
+        }
+
+        @if (!string.IsNullOrEmpty(githubErrorMessage))
+        {
+            <p class="error-message">@githubErrorMessage</p>
+        }
+
         <button class="auth-btn logout" @onclick="Logout">Log Out</button>
     </div>
 }
@@ -65,10 +80,53 @@ else
     private bool isAuthenticated = false;
     private bool isSignIn = true;
     private string registrationMessage = "";
+    private string? githubErrorMessage;
 
     private LoginModel loginModel = new();
     private RegisterModel registerModel = new();
     private UserModel user = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        githubErrorMessage = null;
+
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("errorMessage", out var errorMsg))
+        {
+            githubErrorMessage = errorMsg;
+        }
+
+        try
+        {
+            var client = ClientFactory.CreateClient("with-cookies");
+            var response = await client.GetAsync("/api/auth/me");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var userModel = await response.Content.ReadFromJsonAsync<UserModel>();
+
+                if (userModel is null)
+                {
+                    return;
+                }
+
+                user = userModel;
+
+                isAuthenticated = true;
+            }
+            else
+            {
+                // Если пришел 401, значит пользователь не авторизован
+                isAuthenticated = false;
+            }
+        }
+        catch
+        {
+            // На всякий случай, вдруг сервер вообще недоступен
+            isAuthenticated = false;
+        }
+    }
 
     private void SetTab(bool signIn)
     {
@@ -80,8 +138,9 @@ else
 
     private async Task SignIn()
     {
-        var fullUrl = $"{NavManager.BaseUri}api/auth/login";
-        var response = await Http.PostAsJsonAsync(fullUrl, loginModel);
+        var fullUrl = "/api/auth/login";
+        var client = ClientFactory.CreateClient("with-cookies");
+        var response = await client.PostAsJsonAsync(fullUrl, loginModel);
 
         if (response.IsSuccessStatusCode)
         {
@@ -92,8 +151,9 @@ else
 
     private async Task SignUp()
     {
-        var fullUrl = $"{NavManager.BaseUri}api/auth/register";
-        var response = await Http.PostAsJsonAsync(fullUrl, registerModel);
+        var fullUrl = "/api/auth/register";
+        var client = ClientFactory.CreateClient("with-cookies");
+        var response = await client.PostAsJsonAsync(fullUrl, registerModel);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -107,24 +167,34 @@ else
 
     private async Task ChangePassword()
     {
-        await Http.PostAsync("/api/auth/change-password", null);
+        var client = ClientFactory.CreateClient("with-cookies");
+        await client.PostAsync("/api/auth/change-password", null);
     }
-
+    /*
     private async Task ConnectGitHub()
     {
         var response = await Http.PostAsync("/api/auth/link-github", null);
+
         if (response.IsSuccessStatusCode)
         {
             user.Role = "auditor";
         }
+    }*/
+
+    private async Task ConnectGitHub()
+    {
+        NavManager.NavigateTo("/api/auth/signin-github", forceLoad: true);
     }
 
     private async Task ConnectMetaMask()
     {
         var accounts = await JS.InvokeAsync<string[]>("myWeb3Functions.connectMetaMask");
+
         if (accounts.Length > 0)
         {
-            var response = await Http.PostAsJsonAsync("/api/auth/link-metamask", new { Address = accounts[0] });
+            var client = ClientFactory.CreateClient("with-cookies");
+            var response = await client.PostAsJsonAsync("/api/auth/link-metamask", new { Address = accounts[0] });
+
             if (response.IsSuccessStatusCode)
             {
                 user.Role = "deployer";
@@ -134,9 +204,20 @@ else
 
     private async Task Logout()
     {
-        await Http.PostAsync("/api/auth/logout", null);
-        isAuthenticated = false;
-        user = new UserModel();
+        var client = ClientFactory.CreateClient("with-cookies");
+        var response = await client.PostAsync("/api/auth/logout", null);
+
+        if (response.IsSuccessStatusCode)
+        {
+            isAuthenticated = false;
+            user = new UserModel();
+
+            NavManager.NavigateTo("/login", forceLoad: true);
+        }
+        else
+        {
+            Console.WriteLine("Logout failed");
+        }
     }
 
     private class LoginModel
@@ -157,5 +238,7 @@ else
     {
         public string Login { get; set; } = "";
         public string Role { get; set; } = "User";
+        public string? GitHubId { get; set; }
+        public string? WalletAddress { get; set; }
     }
 }

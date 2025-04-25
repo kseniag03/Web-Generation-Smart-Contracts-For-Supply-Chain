@@ -23,7 +23,7 @@ namespace Tests.ApplicationTests
             // Arrange
             var contractName = "TestContract";
             var expectedCode = $"generated code for {contractName}";
-            _contractRepositoryMock.Setup(repo => repo.GenerateContractCode(contractName, "area", "uint8", false, false))
+            _contractRepositoryMock.Setup(repo => repo.GenerateContractCode(contractName, "area", "uint8", false, false, string.Empty))
                 .Returns(expectedCode);
 
             var dto = new ContractParamsDto { 
@@ -32,10 +32,11 @@ namespace Tests.ApplicationTests
                 UintType = "uint8",
                 EnableEvents = false,
                 IncludeVoidLabel = false,
+                TargetOs = "windows",
             };
 
             // Act
-            var result = _smartContractService.GenerateContractCode(dto);
+            var result = _smartContractService.GenerateContractCode(dto, string.Empty);
 
             // Assert
             Assert.Equal(expectedCode, result);
@@ -47,11 +48,11 @@ namespace Tests.ApplicationTests
             // Arrange
             var contractName = "ExistingContract";
             var expectedCode = $"contract {contractName} code: WANTED";
-            _contractRepositoryMock.Setup(repo => repo.GetContractCode(contractName))
+            _contractRepositoryMock.Setup(repo => repo.GetContractCode(contractName, string.Empty))
                 .Returns(expectedCode);
 
             // Act
-            var result = _smartContractService.GetContractCode(contractName);
+            var result = _smartContractService.GetContractCode(contractName, string.Empty);
 
             // Assert
             Assert.Equal(expectedCode, result);

@@ -2,84 +2,130 @@
 using Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Application.DTOs;
-// using Core.Entities;
+using Utilities.Interfaces;
+using Infrastructure.Repositories.Helpers;
 
 namespace WebApp.Controllers
 {
-    // https://{domain}/api/contracts/{action}
     [ApiController]
     [Route("api/contracts")]
     public class SmartContractController : ControllerBase
     {
         private readonly SmartContractService _contractService;
 
-        public SmartContractController(SmartContractService contractService)
+        private readonly IHardhatExecutor _hh;
+        private readonly IFoundryExecutor _fh;
+        private readonly ISlitherExecutor _sh;
+
+        public SmartContractController(
+            SmartContractService contractService,
+            IHardhatExecutor hh,
+            IFoundryExecutor fh,
+            ISlitherExecutor sh)
         {
             _contractService = contractService;
+
+            _hh = hh;
+            _fh = fh;
+            _sh = sh;
         }
 
         /// <summary>
         /// Генерирует код смарт-контракта на основе шаблона
         /// </summary>
         [HttpPost("generate")]
-        public IActionResult GenerateContract(ContractParamsDto paramsDto)
+        public async Task<IActionResult> GenerateContractAsync(ContractParamsDto paramsDto)
         {
-            string contractCode = _contractService.GenerateContractCode(paramsDto);
-            return Ok(new { contractName = paramsDto.ContractName, code = contractCode });
+            if (paramsDto == null)
+            {
+                return BadRequest("Missing contract parameters.");
+            }
+
+            var instancePath = ContractPathHelper.ComputeInstancePath(paramsDto);
+            var contractCode = _contractService.GenerateContractCode(paramsDto, instancePath);
+
+            if (_hh is not null && !string.IsNullOrEmpty(contractCode))
+            {
+                var compileResult = await _hh.CompileContract(instancePath);
+                // logging
+            }
+
+            return Ok(new
+            {
+                contractName = paramsDto.ContractName,
+                code = contractCode,
+                instancePath
+            });
         }
 
         /// <summary>
         /// Получает сгенерированный код смарт-контракта
         /// </summary>
-        [HttpGet("{contractName}/code")]
-        public IActionResult GetContractCode(string contractName)
+        [HttpGet("code/{contractName}")]
+        public IActionResult GetContractCode(ContractParamsDto paramsDto)
         {
-            string contractCode = _contractService.GetContractCode(contractName);
+            if (paramsDto == null || string.IsNullOrEmpty(paramsDto.ContractName))
+            {
+                return BadRequest("Missing contract name parameter.");
+            }
+
+            var instancePath = ContractPathHelper.ComputeInstancePath(paramsDto);
+            var contractCode = _contractService.GetContractCode(paramsDto.ContractName, instancePath);
+
             if (string.IsNullOrEmpty(contractCode))
+            {
                 return NotFound("Contract code not found.");
+            }
 
-            return Ok(new { contractName, code = contractCode });
+            return Ok(new { paramsDto.ContractName, code = contractCode });
         }
-        /*
-        /// <summary>
-        /// Деплоит контракт в блокчейн и возвращает его публичный адрес
-        /// </summary>
-        [HttpPost("{contractName}/deploy")]
-        public async Task<IActionResult> DeployContract(string contractName)
-        {
-            string deploymentAddress = await _contractService.DeployContractAsync(contractName);
-            if (string.IsNullOrEmpty(deploymentAddress))
-                return BadRequest("Failed to deploy contract.");
 
-            return Ok(new { contractName, address = deploymentAddress });
-        }
-        */
         /// <summary>
         /// Получает публичный адрес задеплоенного контракта
         /// </summary>
-        [HttpGet("{contractName}/address")]
-        public IActionResult GetDeployedContractAddress(string contractName)
+        [HttpGet("address/{contractName}")]
+        public IActionResult GetDeployedContractAddress(ContractParamsDto paramsDto)
         {
-            string contractAddress = _contractService.GetDeployedContractAddress(contractName);
+            if (paramsDto == null || string.IsNullOrEmpty(paramsDto.ContractName))
+            {
+                return BadRequest("Missing contract name parameter.");
+            }
+
+            var instancePath = ContractPathHelper.ComputeInstancePath(paramsDto);
+            var contractAddress = _contractService.GetDeployedContractAddress(paramsDto.ContractName, instancePath);
+
             if (string.IsNullOrEmpty(contractAddress))
+            {
                 return NotFound("Contract is not deployed.");
+            }
 
-            return Ok(new { contractName, address = contractAddress });
+            return Ok(new { paramsDto.ContractName, address = contractAddress });
         }
-        /*
-        /// <summary>
-        /// Тестирует контракт, выполняя тестовые вызовы
-        /// </summary>
-        [HttpPost("{contractName}/test")]
-        public async Task<IActionResult> TestContract(string contractName)
+
+        [HttpGet("abi-bytecode/{contractName}")]
+        public IActionResult GetAbiAndBytecode(ContractParamsDto paramsDto)
         {
-            bool success = await _contractService.TestContractAsync(contractName);
-            if (!success)
-                return BadRequest("Contract test failed.");
+            if (paramsDto == null || string.IsNullOrEmpty(paramsDto.ContractName))
+            {
+                return BadRequest("Missing contract name parameter.");
+            }
 
-            return Ok($"Contract {contractName} passed all tests.");
+            var instancePath = ContractPathHelper.ComputeInstancePath(paramsDto);
+            var abiBytecodeDto = _contractService.GetContractAbiBytecode(paramsDto.ContractName, instancePath);
+
+            if (abiBytecodeDto is null)
+            {
+                return NotFound("Compiled contract not found");
+            }
+
+            return Ok(new
+            {
+                abi = abiBytecodeDto.Abi,
+                bytecode = abiBytecodeDto.Bytecode
+            });
         }
 
+        /*
         /// <summary>
         /// Получает информацию о контракте из блокчейна
         /// </summary>
@@ -94,19 +140,62 @@ namespace WebApp.Controllers
         }
         */
 
+        [Authorize(Roles = "Tester, Auditor, Deployer, Admin")]
+        [HttpPost("test")]
+        public async Task<IActionResult> Test(ContractParamsDto paramsDto)
+        {
+            if (_hh is null)
+            {
+                return StatusCode(500, "Internal Server Error: null hardhat executor");
+            }
+
+            if (paramsDto == null)
+            {
+                return BadRequest($"No reqired params send");
+            }
+
+            var instancePath = ContractPathHelper.ComputeInstancePath(paramsDto);
+
+            try
+            {
+                // _contractService.GenerateContractCode(paramsDto, instancePath);
+
+                var result = await _hh.TestContract(instancePath);
+
+                return Ok(new { output = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
+        }
+
         [Authorize(Roles = "Auditor, Deployer, Admin")]
         [HttpPost("audit")]
-        public async Task<IActionResult> AuditContract()
+        public async Task<IActionResult> AuditContract(ContractParamsDto paramsDto)
         {
-            return Ok("Running security audit...");
-        }
+            if (_sh is null)
+            {
+                return StatusCode(500, "Internal Server Error: null slither executor");
+            }
 
-        [Authorize(Roles = "Deployer, Admin")]
-        [HttpPost("deploy")]
-        public async Task<IActionResult> DeployContract()
-        {
-            return Ok("Deploying contract...");
-        }
+            if (paramsDto == null)
+            {
+                return BadRequest($"No reqired params send");
+            }
 
+            var instancePath = ContractPathHelper.ComputeInstancePath(paramsDto);
+
+            try
+            {
+                var result = await _sh.RunAnalysis(instancePath);
+
+                return Ok("Running security audit...");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
+        }
     }
 }

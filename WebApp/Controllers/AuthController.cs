@@ -1,7 +1,11 @@
-﻿using Application.DTOs;
+﻿using System.Security.Claims;
+using Application.DTOs;
 using Application.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace WebApp.Controllers
 {
@@ -16,6 +20,44 @@ namespace WebApp.Controllers
             _authService = authService;
         }
 
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var login = User.Identity?.Name;
+
+            if (string.IsNullOrEmpty(login))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _authService.GetUserByLogin(login);
+
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            return Ok(user);
+        }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Logout error: {ex.Message}");
+
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto login)
         {
@@ -28,7 +70,13 @@ namespace WebApp.Controllers
                     return Unauthorized("Invalid credentials");
                 }
 
+                await SetupCookie(token);
+
                 return Ok(token);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("users_login_key") == true)
+            {
+                return Conflict("Login already exists");
             }
             catch (Exception ex)
             {
@@ -47,10 +95,16 @@ namespace WebApp.Controllers
 
                 if (token is null)
                 {
-                    BadRequest("Registration failed");
+                    return BadRequest("Registration failed");
                 }
 
+                await SetupCookie(token);
+
                 return Ok(token);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("users_login_key") == true)
+            {
+                return Conflict("Login already exists");
             }
             catch (Exception ex)
             {
@@ -67,14 +121,14 @@ namespace WebApp.Controllers
             bool exists = false; // _authService.IsUsernameTaken(name);
             return exists ? Conflict("Username already taken") : Ok();
         }
-
+        /*
         [HttpPost("link-github")]
         [Authorize]
         public async Task<IActionResult> LinkGithub([FromBody] GithubDto github)
         {
             var success = await _authService.LinkGitHub(User.Identity.Name, github.GithubLogin);
             return success ? Ok("GitHub linked") : BadRequest("GitHub linking failed");
-        }
+        }*/
 
         [HttpPost("link-metamask")]
         [Authorize]
@@ -84,12 +138,37 @@ namespace WebApp.Controllers
             return success ? Ok("MetaMask linked") : BadRequest("MetaMask linking failed");
         }
 
+        [HttpGet("signin-github")]
+        public IActionResult SignInWithGitHub()
+        {
+            var props = new AuthenticationProperties
+            {
+                RedirectUri = "/github-callback"
+            };
+
+            return Challenge(props, "GitHub");
+        }
+
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePassword)
         {
             var success = await _authService.ChangePassword(User.Identity.Name, changePassword.OldPassword, changePassword.NewPassword);
             return success ? Ok("Password changed") : BadRequest("Password change failed");
+        }
+
+        private async Task SetupCookie(UserDto user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.Login),
+                new Claim(ClaimTypes.Role, user.Role)
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
         }
     }
 }

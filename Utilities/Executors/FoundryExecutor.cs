@@ -1,24 +1,31 @@
-﻿using Utilities.Interfaces;
+﻿using Microsoft.Extensions.Configuration;
+using Utilities.Interfaces;
+using Utilities.Repositories.Helpers;
 
 namespace Utilities.Executors
 {
     public class FoundryExecutor : IFoundryExecutor
     {
-        private readonly ICommandExecutor _commandExecutor;
+        private readonly string _baseDir = AppContext.BaseDirectory;
+        private readonly ICommandExecutor _cmd;
 
-        public FoundryExecutor(ICommandExecutor commandExecutor)
+        public FoundryExecutor(IConfiguration config, ICommandExecutor cmd)
         {
-            _commandExecutor = commandExecutor;
+            _cmd = cmd;
         }
 
-        public Task<string> GetGasReport(string command, string args)
+        public Task<string> GetGasReport(string instancePath, string args = "")
         {
-            throw new NotImplementedException();
+            var script = GetAbsolutePath("Utilities/run-foundry.sh");
+
+            return _cmd.ExecuteCommandAsync(
+                "/bin/bash",
+                $"{script} {instancePath}",
+                _baseDir
+            );
         }
 
-        public Task<string> TestContract(string command, string args)
-        {
-            throw new NotImplementedException();
-        }
+        private string GetAbsolutePath(string relativePath) =>
+            Path.Combine(_baseDir, relativePath);
     }
 }

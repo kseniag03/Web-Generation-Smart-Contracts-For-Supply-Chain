@@ -1,0 +1,51 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: WebApp.dockerfile
+      target: ${TARGET:-runtime-release}
+      args:
+        CONFIG:       ${CONFIG:-Release}
+        DOTNET_FLAGS: ${DOTNET_FLAGS:-}
+    image: testsmartcontracts-api:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      CONFIGURATION: ${CONFIGURATION}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      API_BASE_URL: ${API_BASE_URL}
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      ADMIN_LOGIN: ${ADMIN_LOGIN}
+      ADMIN_PASSHASH: ${ADMIN_PASSHASH}
+      GitHubClientId: ${GITHUB_CLIENT_ID}
+      GitHubClientSecret: ${GITHUB_CLIENT_SECRET}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # local ok, perfectly need separate proj
+      - ./Instances:/app/Instances
+      - keys-volume:/app/keys
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+  keys-volume:

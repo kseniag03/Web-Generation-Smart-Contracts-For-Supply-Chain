@@ -1,6 +1,5 @@
 ﻿using Application.DTOs;
 using Application.Mappings;
-using Core.Entities;
 using Core.Interfaces;
 
 namespace Application.Services
@@ -12,6 +11,13 @@ namespace Application.Services
         public AuthService(IAuthRepository authRepository)
         {
             _authRepository = authRepository;
+        }
+
+        public async Task<UserDto?> GetUserByLogin(string login)
+        {
+            var user = await _authRepository.GetUserByLogin(login);
+
+            return user?.ToDto();
         }
 
         public async Task<UserDto?> RegisterUser(string login, string password, string? email)

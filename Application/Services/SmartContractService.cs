@@ -1,5 +1,5 @@
-﻿// using Core.Entities;
-using Application.DTOs;
+﻿using Application.DTOs;
+using Application.Mappings;
 using Core.Interfaces;
 
 namespace Application.Services
@@ -15,39 +15,33 @@ namespace Application.Services
             // _blockchainService = blockchainService;
         }
 
-        public string GenerateContractCode(ContractParamsDto paramsDto)
+        public string GenerateContractCode(ContractParamsDto paramsDto, string instancePath)
         {
             return _contractRepository.GenerateContractCode(
                 paramsDto.ContractName,
                 paramsDto.ApplicationArea,
                 paramsDto.UintType,
                 paramsDto.EnableEvents,
-                paramsDto.IncludeVoidLabel);
+                paramsDto.IncludeVoidLabel,
+                instancePath);
         }
 
-        public string GetContractCode(string contractName)
+        public string GetContractCode(string contractName, string instancePath)
         {
-            return _contractRepository.GetContractCode(contractName);
+            return _contractRepository.GetContractCode(contractName, instancePath);
         }
+
+        public string GetDeployedContractAddress(string contractName, string instancePath)
+        {
+            return _contractRepository.GetDeployedContractAddress(contractName, instancePath);
+        }
+
+        public AbiBytecodeDto? GetContractAbiBytecode(string contractName, string instancePath)
+        {
+            return _contractRepository.GetContractAbiBytecode(contractName, instancePath)?.ToDto();
+        }
+
         /*
-        public async Task<string> DeployContractAsync(string contractName)
-        {
-            string contractCode = _contractRepository.GetContractCode(contractName);
-            if (string.IsNullOrEmpty(contractCode)) return null;
-
-            return await _blockchainService.DeployContractAsync(contractCode);
-        }
-        */
-        public string GetDeployedContractAddress(string contractName)
-        {
-            return _contractRepository.GetDeployedContractAddress(contractName);
-        }
-        /*
-        public async Task<bool> TestContractAsync(string contractName)
-        {
-            return await _blockchainService.TestContractAsync(contractName);
-        }
-
         public async Task<object> GetContractInfoAsync(string contractAddress)
         {
             return await _blockchainService.GetContractInfoAsync(contractAddress);

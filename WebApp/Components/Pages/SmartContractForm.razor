@@ -1,5 +1,7 @@
-﻿@inject NavigationManager NavManager
-@inject HttpClient Http
+﻿@using Application.DTOs
+@using System.Text.Json
+@inject NavigationManager NavManager
+@inject IHttpClientFactory ClientFactory
 @inject IJSRuntime JS
 
 <div class="main-container">
@@ -27,10 +29,39 @@
 
             <!-- Блок кнопок -->
             <div class="button-container">
-                <button class="custom-btn" disabled>Deploy</button>
-                <button class="custom-btn" disabled>Audit</button>
-                <button class="custom-btn" @onclick="RunTesting">Testing</button>
+
+                <div class="tooltip-container">
+                    <button class="custom-btn" @onclick="RunDeploy" disabled="@(!canDeploy)">
+                        Deploy
+                    </button>
+                    @if (!canDeploy)
+                    {
+                        <span class="tooltip-text">Недостаточно прав</span>
+                    }
+                </div>
+
+                <div class="tooltip-container">
+                    <button class="custom-btn" @onclick="RunAudit" disabled="@(!canAudit)">
+                        Audit
+                    </button>
+                    @if (!canAudit)
+                    {
+                        <span class="tooltip-text">Недостаточно прав</span>
+                    }
+                </div>
+
+                <div class="tooltip-container">
+                    <button class="custom-btn" @onclick="RunTesting" disabled="@(!canTest)">
+                        Testing
+                    </button>
+                    @if (!canTest)
+                    {
+                        <span class="tooltip-text">Недостаточно прав</span>
+                    }
+                </div>
+
                 <button class="custom-btn" @onclick="ToggleEdit">@editButtonText</button>
+
             </div>
 
             <!-- Поле вывода Testing -->
@@ -72,6 +103,13 @@
         <!-- Опциональное поле void Label -->
         <label>Include void Label:</label>
         <input type="checkbox" @bind="includeVoidLabel" />
+
+        <!-- Выбор ОС -->
+        <label>Target OS:</label>
+        <select @bind="selectedOs">
+            <option value="unix">Unix (default)</option>
+            <option value="windows">Windows</option>
+        </select>
     </div>
 </div>
 
@@ -88,9 +126,40 @@
     private bool enableEvents = true;
     private string selectedUintType = "uint256";
     private bool includeVoidLabel = true;
+    private string selectedOs = "unix";
 
-    private readonly List<string> applicationAreaOptions = new() { "IoT", "Pharmaceutics", "Metallurgy" };
+    private UserModel user = new();
+    private bool canTest, canAudit, canDeploy;
+
+    private readonly List<string> applicationAreaOptions = new() { "IoT", "Pharmaceutics" };
     private readonly List<string> uintOptions = new() { "uint8", "uint16", "uint32", "uint64", "uint128", "uint256" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = ClientFactory.CreateClient("with-cookies");
+            var response = await client.GetAsync("/api/auth/me");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var userModel = await response.Content.ReadFromJsonAsync<UserModel>();
+
+                if (userModel is null) {
+                    return;
+                }
+
+                user = userModel;
+
+                canTest = IsInRole(user, "Tester", "Auditor", "Deployer", "Admin");
+                canAudit = IsInRole(user, "Auditor", "Deployer", "Admin");
+                canDeploy = IsInRole(user, "Deployer", "Admin");
+            }
+        }
+        catch
+        {
+        }
+    }
 
     private async Task GenerateContract()
     {
@@ -107,21 +176,32 @@
             ApplicationArea = selectedApplicationArea,
             UintType = selectedUintType,
             EnableEvents = enableEvents,
-            IncludeVoidLabel = includeVoidLabel
+            IncludeVoidLabel = includeVoidLabel,
+            TargetOs = selectedOs
         };
 
         try
         {
-            var result = await Http.PostAsJsonAsync($"{NavManager.BaseUri}api/contracts/generate", contractParams);
+            var client = ClientFactory.CreateClient("with-cookies");
+            var result = await client.PostAsJsonAsync("/api/contracts/generate", contractParams);
 
             if (result.IsSuccessStatusCode)
             {
                 var contractResponse = await result.Content.ReadFromJsonAsync<ContractResponse>();
 
                 isEditing = false;
+
                 await Task.Delay(50);
 
-                responseMessage = $"Contract: {contractResponse.ContractName}, Code: {contractResponse.Code}";
+                if (contractResponse is not null && !string.IsNullOrEmpty(contractResponse.Code))
+                {
+                    responseMessage = $"{contractResponse.Code}";
+                }
+                else
+                {
+                    responseMessage = $"Error during contract {contractResponse?.ContractName} generation: empty code";
+                }
+
                 StateHasChanged();
 
                 await JS.InvokeVoidAsync("highlightPrism");
@@ -143,9 +223,9 @@
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", responseMessage);
     }
-
+    /*
     private async Task RunTesting()
-    {
+        {
         testingOutput.Clear();
         testingOutput.Add("Running tests...");
         await Task.Delay(1000);
@@ -154,6 +234,119 @@
         testingOutput.Add("Test 2: ✔ Passed");
         testingOutput.Add("Test 3: ✘ Failed (Gas exceeded)");
     }
+    */
+    private async Task RunTesting()
+    {
+        testingOutput.Clear();
+        testingOutput.Add("Запуск тестирования...");
+
+        var contractParams = BuildContractParams();
+
+        try
+        {
+            var client = ClientFactory.CreateClient("with-cookies");
+            var result = await client.PostAsJsonAsync("/api/contracts/test", contractParams);
+
+            if (result.IsSuccessStatusCode)
+            {
+                var output = await result.Content.ReadFromJsonAsync<JsonElement>();
+                var text = output.GetProperty("output").ToString();
+
+                testingOutput.AddRange(text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+            }
+            else
+            {
+                var error = await result.Content.ReadAsStringAsync();
+                testingOutput.Add($"Ошибка: {result.StatusCode} — {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"Исключение: {ex.Message}");
+        }
+    }
+
+    private async Task RunAudit()
+    {
+        testingOutput.Clear();
+        testingOutput.Add("Запуск аудита...");
+
+        var contractParams = BuildContractParams();
+
+        try
+        {
+            var client = ClientFactory.CreateClient("with-cookies");
+            var result = await client.PostAsJsonAsync("/api/contracts/audit", contractParams);
+
+            if (result.IsSuccessStatusCode)
+            {
+                var message = await result.Content.ReadAsStringAsync();
+                testingOutput.Add(message);
+            }
+            else
+            {
+                var error = await result.Content.ReadAsStringAsync();
+                testingOutput.Add($"Ошибка аудита: {result.StatusCode} — {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"Исключение аудита: {ex.Message}");
+        }
+    }
+
+    private async Task RunDeploy()
+    {
+        testingOutput.Clear();
+        testingOutput.Add("Подключение к MetaMask и деплой...");
+
+        if (user is null || string.IsNullOrEmpty(user.WalletAddress))
+        {
+            testingOutput.Add($"Не найден пользователь или его Metamask кошелек, деплой невозможен");
+
+            return;
+        }
+
+        var client = ClientFactory.CreateClient("with-cookies");
+        var result = await client.GetFromJsonAsync<AbiBytecodeModel>("/api/contracts/abi-bytecode/{contractName}");
+        
+        if (result is null || string.IsNullOrEmpty(result.Abi) || string.IsNullOrEmpty(result.Bytecode))
+        {
+            testingOutput.Add($"Не найдены Abi и Bytecode, деплой невозможен");
+
+            return;
+        }
+
+        var abi = result.Abi;
+        var bytecode = result.Bytecode;
+        var constructorArgs = new object[]
+        {
+            user.WalletAddress
+        };
+
+        try
+        {
+            var deployedAddress = await JS.InvokeAsync<string>(
+                "deployFunctions.deployWithMetaMask",
+                abi, bytecode, constructorArgs
+            );
+
+            if (deployedAddress.StartsWith("ERROR"))
+            {
+                testingOutput.Add("Ошибка: " + deployedAddress);
+            }
+            else
+            {
+                testingOutput.Add("Контракт успешно задеплоен по адресу:");
+                testingOutput.Add(deployedAddress);
+            }
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"Исключение при деплое: {ex.Message}");
+        }
+    }
+
 
     private async Task ToggleEdit()
     {
@@ -169,6 +362,19 @@
         }
     }
 
+    private ContractParams BuildContractParams() => new()
+        {
+            ContractName = contractName,
+            ApplicationArea = selectedApplicationArea,
+            UintType = selectedUintType,
+            EnableEvents = enableEvents,
+            IncludeVoidLabel = includeVoidLabel,
+            TargetOs = selectedOs
+        };
+
+    private bool IsInRole(UserModel user, params string[] roles) =>
+        roles.Any(r => r.Equals(user.Role, StringComparison.OrdinalIgnoreCase));
+
     private class ContractResponse
     {
         public string ContractName { get; set; }
@@ -182,5 +388,20 @@
         public string UintType { get; set; }
         public bool EnableEvents { get; set; }
         public bool IncludeVoidLabel { get; set; }
+        public string TargetOs { get; set; }
+    }
+
+    private class UserModel
+    {
+        public string Login { get; set; } = "";
+        public string Role { get; set; } = "User";
+        public string? GitHubId { get; set; }
+        public string? WalletAddress { get; set; }
+    }
+
+    private class AbiBytecodeModel
+    {
+        public string? Abi { get; set; }
+        public string? Bytecode { get; set; }
     }
 }

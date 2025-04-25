@@ -19,7 +19,7 @@ namespace Tests.ApplicationTests
         [Fact]
         public async Task LoginUser_WithNonExistentUser_ShouldReturnNull()
         {
-            _authRepositoryMock.Setup(repo => repo.GetByUsernameAsync("nonexistent"))
+            _authRepositoryMock.Setup(repo => repo.GetUserByLogin("nonexistent"))
                 .ReturnsAsync((User)null);
 
             var result = await _authService.LoginUser("nonexistent", "password123");
@@ -41,7 +41,7 @@ namespace Tests.ApplicationTests
                 }
             };
 
-            _authRepositoryMock.Setup(repo => repo.GetByUsernameAsync("existingUser"))
+            _authRepositoryMock.Setup(repo => repo.GetUserByLogin("existingUser"))
                 .ReturnsAsync(user);
 
             var result = await _authService.LoginUser("existingUser", "wrongpassword");

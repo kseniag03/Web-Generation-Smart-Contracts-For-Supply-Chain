@@ -4,7 +4,7 @@ namespace Core.Interfaces
 {
     public interface IAuthRepository
     {
-        Task<User?> GetByUsernameAsync(string login);
+        Task<User?> GetUserByLogin(string login);
         Task<User?> RegisterUser(string login, string password, string? email);
         Task<User?> LoginUser(string login, string password);
         Task<bool> LinkGitHub(string login, string githubId);

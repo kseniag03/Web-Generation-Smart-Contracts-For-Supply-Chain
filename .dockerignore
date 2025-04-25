@@ -1,0 +1,42 @@
+# .NET build output
+bin/
+obj/
+*.user
+*.suo
+
+# VS Code/Visual Studio
+.vscode/
+*.swp
+*.log
+*.vs/
+*.sln.ide
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# System
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose.*
+
+# Test/selenium temp
+Tests/chromedriver-*/  
+Tests/chrome-*/
+
+# Anything sensitive
+.env

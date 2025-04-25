@@ -2,6 +2,7 @@
 using Core.Enums;
 using Core.Interfaces;
 using Infrastructure.Data;
+using Infrastructure.Repositories.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,26 +19,35 @@ namespace Infrastructure.Repositories
             _passwordHasher = new PasswordHasher<User>();
         }
 
-        public async Task<User?> GetByUsernameAsync(string login)
+        public async Task<User?> GetUserByLogin(string login)
         {
-            return await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
+            var user = await _dbContext.Users
+                .Include(u => u.Userauth)
+                .Include(u => u.IdRoles)
+                .FirstOrDefaultAsync(u => u.Login == login || u.Email == login);
+
+            if (user == null || user.Userauth == null)
+            {
+                return null;
+            }
+
+            return user;
         }
 
         public async Task<User?> RegisterUser(string login, string password, string? email)
         {
             if (await _dbContext.Users.AnyAsync(u => u.Login == login))
+            {
                 return null; // Логин уже занят
-
-            var id = _dbContext.Users.Count() + 1;
+            }
 
             var newUser = new User
             {
-                IdUser = id, // Guid.NewGuid(),
                 Login = login,
                 Firstname = string.Empty,
                 Lastname = string.Empty,
-                Email = email
-                // GitHubId = null              need to add
+                Email = email,
+                GitHubId = string.Empty
             };
 
             var passwordHash = _passwordHasher.HashPassword(newUser, password);
@@ -48,16 +58,10 @@ namespace Infrastructure.Repositories
                 PasswordHash = passwordHash
             };
 
-            var testerRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.IdRole == (int)RoleType.Tester);
-
-            if (testerRole != null)
-            {
-                newUser.IdRoles.Add(testerRole);
-            }
+            await RoleHelper.AssignRole(_dbContext, newUser, RoleType.Tester);
 
             _dbContext.Users.Add(newUser);
 
-            _dbContext.Users.Add(newUser);
             await _dbContext.SaveChangesAsync();
 
             return newUser;
@@ -83,32 +87,52 @@ namespace Infrastructure.Repositories
         public async Task<bool> LinkGitHub(string login, string githubId)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
-            if (user == null) return false;
 
-            /*
+            if (user == null)
+            {
+                return false;
+            }
+
             user.GitHubId = githubId;
 
-            // Если GitHub привязан, повышаем роль до Auditor
-            if (!string.IsNullOrEmpty(user.GitHubId) && string.IsNullOrEmpty(user.WalletAddress))
-                user.Role = RoleType.Auditor;
+            if (!string.IsNullOrEmpty(user.GitHubId))
+            {
+                await RoleHelper.AssignRole(_dbContext, user, RoleType.Auditor);
+            }
 
-            await _dbContext.SaveChangesAsync();*/
+            await _dbContext.SaveChangesAsync();
+
             return true;
         }
 
         public async Task<bool> LinkMetaMask(string login, string walletAddress)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
-            if (user == null) return false;
 
+            if (user == null)
+            {
+                return false;
+            }
+
+            var wallet = new Wallet
+            {
+                IdUser = user.IdUser,
+                Address = walletAddress,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // check wallet working? valid?
             /*
-            user.WalletAddress = walletAddress;
+            if (bad)
+            {
+                return false;
+            }*/
 
-            // Если GitHub и MetaMask привязаны, даем роль Deployer
-            if (!string.IsNullOrEmpty(user.GitHubId) && !string.IsNullOrEmpty(user.WalletAddress))
-                user.Role = RoleType.Deployer;
+            user.Wallets.Add(wallet);
 
-            await _dbContext.SaveChangesAsync();*/
+            await RoleHelper.AssignRole(_dbContext, user, RoleType.Deployer);
+            await _dbContext.SaveChangesAsync();
+
             return true;
         }
 
@@ -116,14 +140,20 @@ namespace Infrastructure.Repositories
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
 
-            if (user == null) return false;
+            if (user == null || user.Userauth == null)
+            {
+                return false;
+            }
 
             var result = _passwordHasher.VerifyHashedPassword(user, user.Userauth.PasswordHash, oldPassword);
 
             if (result != PasswordVerificationResult.Success)
+            {
                 return false; // Старый пароль неверный
+            }
 
             user.Userauth.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+            
             await _dbContext.SaveChangesAsync();
 
             return true;

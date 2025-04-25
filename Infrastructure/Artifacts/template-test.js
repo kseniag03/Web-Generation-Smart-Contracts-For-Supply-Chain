@@ -1,9 +1,7 @@
-import { expect } from "chai";
-import hardhat from "hardhat";
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
-const { ethers } = hardhat;
-
-describe("IOTContractMonitoring (complete)", function () {
+describe("{CONTRACT_NAME} (complete)", function () {
     let contract;
     let owner, labelCreator, ioTSender, ioTReceiver, nonAuthorized, anotherSender;
 
@@ -11,9 +9,8 @@ describe("IOTContractMonitoring (complete)", function () {
         [owner, labelCreator, ioTSender, ioTReceiver, nonAuthorized, anotherSender] = await ethers.getSigners();
 
         // Deploy updated contract
-        const IOTContract = await ethers.getContractFactory("IOTContractMonitoring");
+        const IOTContract = await ethers.getContractFactory("{CONTRACT_NAME}");
         contract = await IOTContract.deploy(owner.address);
-        await contract.deployed();
 
         // By default, we will authorize labelCreator as a label creator
         await contract.connect(owner).setLabelCreatorAuthorization(labelCreator.address, true);
@@ -28,15 +25,17 @@ describe("IOTContractMonitoring (complete)", function () {
     // 1. should allow only authorized LabelCreator to create a label
     //
     it("1. should allow only authorized LabelCreator to create a label", async () => {
+        const labelId = 1;{EVENTS_OPTIONAL}
+
         await expect(
-            contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address)
+            contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address)
         )
             .to.emit(contract, "LabelCreated")
-            .withArgs(1, ioTSender.address, ioTReceiver.address);
+            .withArgs(1, ioTSender.address, ioTReceiver.address);{EVENTS_OPTIONAL}
 
         // Non-authorized user tries to create a label
         await expect(
-            contract.connect(nonAuthorized).createLabel(ioTSender.address, ioTReceiver.address)
+            contract.connect(nonAuthorized).createLabel(labelId, ioTSender.address, ioTReceiver.address)
         ).to.be.revertedWith("Not an authorized Label Creator");
     });
 
@@ -47,7 +46,7 @@ describe("IOTContractMonitoring (complete)", function () {
         // Non-owner tries to set label creator
         await expect(
             contract.connect(nonAuthorized).setLabelCreatorAuthorization(anotherSender.address, true)
-        ).to.be.revertedWith("OwnableUnauthorizedAccount");
+        ).to.be.revertedWithCustomError(contract, "OwnableUnauthorizedAccount");
 
         // Owner can authorize new label creator
         await contract.connect(owner).setLabelCreatorAuthorization(anotherSender.address, true);
@@ -56,7 +55,7 @@ describe("IOTContractMonitoring (complete)", function () {
         // Non-owner tries to set IoT authorization
         await expect(
             contract.connect(nonAuthorized).setIoTAuthorization(anotherSender.address, true, true, true)
-        ).to.be.revertedWith("OwnableUnauthorizedAccount");
+        ).to.be.revertedWithCustomError(contract, "OwnableUnauthorizedAccount");
 
         // Owner can set IoT authorization
         await contract.connect(owner).setIoTAuthorization(anotherSender.address, true, true, true);
@@ -68,14 +67,15 @@ describe("IOTContractMonitoring (complete)", function () {
     // 3. should allow only authorized IoTSender to mark as Sent
     //
     it("3. should allow only authorized IoTSender to mark as Sent", async () => {
-        // First, create a label (by an authorized labelCreator)
-        await contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address);
         const labelId = 1;
+
+        // First, create a label (by an authorized labelCreator)
+        await contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address);{EVENTS_OPTIONAL}
 
         // The authorized sender (ioTSender) can mark as sent
         await expect(contract.connect(ioTSender).markAsSent(labelId))
             .to.emit(contract, "LabelSent")
-            .withArgs(labelId, ioTSender.address);
+            .withArgs(labelId, ioTSender.address);{EVENTS_OPTIONAL}
 
         // A non-authorized user tries to mark as sent => revert
         await expect(contract.connect(nonAuthorized).markAsSent(labelId))
@@ -86,16 +86,17 @@ describe("IOTContractMonitoring (complete)", function () {
     // 4. should allow only authorized IoTReceiver to mark as Received
     //
     it("4. should allow only authorized IoTReceiver to mark as Received", async () => {
-        await contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address);
         const labelId = 1;
 
+        await contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address);
+
         // Mark it as sent first
-        await contract.connect(ioTSender).markAsSent(labelId);
+        await contract.connect(ioTSender).markAsSent(labelId);{EVENTS_OPTIONAL}
 
         // The authorized receiver can mark as received
         await expect(contract.connect(ioTReceiver).markAsReceived(labelId))
             .to.emit(contract, "LabelReceived")
-            .withArgs(labelId, ioTReceiver.address);
+            .withArgs(labelId, ioTReceiver.address);{EVENTS_OPTIONAL}
 
         // A non-authorized user tries to mark as received => revert
         await expect(contract.connect(nonAuthorized).markAsReceived(labelId))
@@ -106,8 +107,11 @@ describe("IOTContractMonitoring (complete)", function () {
     // 5. should revert when trying to create label with invalid receiver
     //
     it("5. should revert when trying to create label with invalid receiver", async () => {
+        const labelId = 1;
+        const ZERO_ADDRESS = ethers.ZeroAddress;
+
         await expect(
-            contract.connect(labelCreator).createLabel(ioTSender.address, ethers.constants.AddressZero)
+            contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ZERO_ADDRESS)
         ).to.be.revertedWith("Invalid receiver address");
     });
 
@@ -130,22 +134,25 @@ describe("IOTContractMonitoring (complete)", function () {
         // Check setLabelCreatorAuthorization
         await expect(
             contract.connect(nonAuthorized).setLabelCreatorAuthorization(labelCreator.address, true)
-        ).to.be.revertedWith("OwnableUnauthorizedAccount");
+        ).to.be.revertedWithCustomError(contract, "OwnableUnauthorizedAccount");
     });
 
     //
     // 7. should store labels correctly in the mapping
     //
     it("7. should store labels correctly in the mapping", async () => {
-        await contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address);
-        const label = await contract.labels(1);
+        const labelId = 1;
 
-        expect(label.id).to.eq(1);
+        await contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address);
+
+        const label = await contract.labels(labelId);
+
+        expect(label.id).to.eq(labelId);
         expect(label.sender).to.eq(ioTSender.address);
         expect(label.receiver).to.eq(ioTReceiver.address);
         expect(label.sent).to.eq(false);
-        expect(label.received).to.eq(false);
-        expect(label.voided).to.eq(false);
+        expect(label.received).to.eq(false);{VOID_OPTIONAL}
+        expect(label.voided).to.eq(false);{VOID_OPTIONAL}
     });
 
     //
@@ -159,8 +166,9 @@ describe("IOTContractMonitoring (complete)", function () {
     // 9. Should prevent replay attack on markAsReceived
     //
     it("9. Should prevent replay attack on markAsReceived", async () => {
-        await contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address);
         const labelId = 1;
+
+        await contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address);
 
         // Must be sent before it can be received
         await contract.connect(ioTSender).markAsSent(labelId);
@@ -177,10 +185,10 @@ describe("IOTContractMonitoring (complete)", function () {
     // 10. Should not allow unauthorized sender to mark label as sent
     //
     it("10. Should not allow unauthorized sender to mark label as sent", async () => {
-        // We will authorize labelCreator, but not 'anotherSender'
-        await contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address);
-
         const labelId = 1;
+
+        // We will authorize labelCreator, but not 'anotherSender'
+        await contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address);
 
         // If 'ioTReceiver' is also authorized as a sender, we need to demonstrate that
         // even if they are authorized, they're not the *correct* sender for that label
@@ -197,20 +205,23 @@ describe("IOTContractMonitoring (complete)", function () {
     // 11. Should not allow unauthorized sender to create label
     //
     it("11. Should not allow unauthorized sender to create label", async () => {
+        const labelId = 1;
+
         // 'labelCreator' is authorized to create a label, but we pass 'nonAuthorized' as the label's sender
         // If 'nonAuthorized' is not an authorized IoTSender, it fails
         await expect(
-            contract.connect(labelCreator).createLabel(nonAuthorized.address, ioTReceiver.address)
+            contract.connect(labelCreator).createLabel(labelId, nonAuthorized.address, ioTReceiver.address)
         ).to.be.revertedWith("Sender not authorized");
-    });
+    });{VOID_OPTIONAL}
 
     //
     // 12. Should prevent double voiding of label
     //
     it("12. Should prevent double voiding of label", async () => {
-        // We'll create a label
-        await contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address);
         const labelId = 1;
+
+        // We'll create a label
+        await contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address);
 
         // We (ioTSender) are authorized as a sender device => can also void
         await contract.connect(ioTSender).voidLabel(labelId);
@@ -219,7 +230,7 @@ describe("IOTContractMonitoring (complete)", function () {
         await expect(
             contract.connect(ioTSender).voidLabel(labelId)
         ).to.be.revertedWith("Label already voided");
-    });
+    });{VOID_OPTIONAL}
 
     //
     // ---------------- Extended Features ----------------
@@ -236,9 +247,11 @@ describe("IOTContractMonitoring (complete)", function () {
         await contract.connect(owner).setLabelCreatorAuthorization(labelCreator.address, false);
         expect(await contract.authorizedLabelCreators(labelCreator.address)).to.equal(false);
 
+        const labelId = 1;
+
         // Now labelCreator can no longer create labels
         await expect(
-            contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address)
+            contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address)
         ).to.be.revertedWith("Not an authorized Label Creator");
     });
 
@@ -250,7 +263,9 @@ describe("IOTContractMonitoring (complete)", function () {
         expect(await contract.authorizedIoTSenders(ioTSender.address)).to.equal(true);
         expect(await contract.authorizedIoTReceivers(ioTReceiver.address)).to.equal(true);
 
-        await contract.connect(labelCreator).createLabel(ioTSender.address, ioTReceiver.address);
+        const labelId = 1;
+
+        await contract.connect(labelCreator).createLabel(labelId, ioTSender.address, ioTReceiver.address);
 
         // De-authorize the sender
         await contract.connect(owner).setIoTAuthorization(ioTSender.address, true, false, false);
@@ -281,6 +296,6 @@ describe("IOTContractMonitoring (complete)", function () {
 
         // Non-owner attempt should fail
         await expect(contract.connect(ioTSender).setDeviceInfo(ioTReceiver.address, location))
-            .to.be.revertedWith("OwnableUnauthorizedAccount");
+            .to.be.revertedWithCustomError(contract, "OwnableUnauthorizedAccount");
     });
 });
