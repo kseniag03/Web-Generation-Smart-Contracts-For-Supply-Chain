@@ -6,6 +6,9 @@
 # env data
 .env
 
+# runtime data
+Instances/
+
 # chrome and chromedriver exe
 Tests/chrome-win64/
 Tests/chromedriver-win64/

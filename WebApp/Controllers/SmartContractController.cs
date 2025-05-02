@@ -46,7 +46,7 @@ namespace WebApp.Controllers
 
             if (_hh is not null && !string.IsNullOrEmpty(contractCode))
             {
-                var compileResult = await _hh.CompileContract(instancePath);
+                var setupResult = await _hh.SetupInstanceEnvironment(instancePath);
                 // logging
             }
 
@@ -159,6 +159,8 @@ namespace WebApp.Controllers
             try
             {
                 // _contractService.GenerateContractCode(paramsDto, instancePath);
+
+                var compileResult = await _hh.CompileContract(instancePath);
 
                 var result = await _hh.TestContract(instancePath);
 

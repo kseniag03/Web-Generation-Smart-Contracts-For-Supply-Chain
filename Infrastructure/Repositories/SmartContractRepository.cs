@@ -11,18 +11,21 @@ namespace Infrastructure.Repositories
     {
         private readonly string _solutionDirectory;
         private readonly string _templatesPath;
+        private readonly string _configsPath;
 
         public SmartContractRepository(IConfiguration configuration)
         {
-            var tempatepath = configuration["ContractTemplatesPath"];
+            var tempatesPath = configuration["ContractTemplatesPath"];
+            var configsPath = configuration["HardhatConfigsPath"];
 
-            if (string.IsNullOrEmpty(tempatepath))
+            if (string.IsNullOrEmpty(tempatesPath) || string.IsNullOrEmpty(configsPath))
             {
-                throw new ArgumentException("Solution directory or template path is not found.");
+                throw new ArgumentException("Templates or configs path is not found.");
             }
 
             _solutionDirectory = SolutionPathHelper.GetSolutionRoot(configuration);
-            _templatesPath = Path.Combine(_solutionDirectory, tempatepath);
+            _templatesPath = Path.Combine(_solutionDirectory, tempatesPath);
+            _configsPath = Path.Combine(_solutionDirectory, configsPath);
         }
 
         public string GenerateContractCode(string contractName, string appArea, string uintType, bool enableEvents, bool includeVoid, string instancePath)
@@ -67,7 +70,7 @@ namespace Infrastructure.Repositories
             File.WriteAllText(contractFilePath, processedContract);
 
             GenerateTestScript(contractName, enableEvents, includeVoid, instancePath);
-            // GenerateDeployScript(contractName, contractName.ToLower());
+            CopyBaseHardhatConfigs(instancePath);
 
             return processedContract;
         }
@@ -128,5 +131,25 @@ namespace Infrastructure.Repositories
 
             File.WriteAllText(scriptFilePath, processedScript);
         }
+
+        private void CopyBaseHardhatConfigs(string instancePath)
+        {
+            CopyIfMissing("hardhat.config.ts", instancePath);
+            CopyIfMissing("tsconfig.json", instancePath);
+            CopyIfMissing("package.json", instancePath);
+            CopyIfMissing("package-lock.json", instancePath); // if using fixed dependencies
+        }
+
+        private void CopyIfMissing(string fileName, string instancePath)
+        {
+            var source = Path.Combine(_configsPath, fileName);
+            var dest = Path.Combine(instancePath, fileName);
+
+            if (!File.Exists(dest))
+            {
+                File.Copy(source, dest);
+            }
+        }
+
     }
 }

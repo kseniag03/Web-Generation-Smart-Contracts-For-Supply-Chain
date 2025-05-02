@@ -23,11 +23,12 @@ services:
       ADMIN_PASSHASH: ${ADMIN_PASSHASH}
       GitHubClientId: ${GITHUB_CLIENT_ID}
       GitHubClientSecret: ${GITHUB_CLIENT_SECRET}
+      HOST_INSTANCES: "${PWD}/Instances"
     restart: unless-stopped
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock   # local ok, perfectly need separate proj
-      - ./Instances:/app/Instances
       - keys-volume:/app/keys
+      - ./Instances:/app/Instances
+      - /var/run/docker.sock:/var/run/docker.sock   # local ok, perfectly need separate proj
 
   db:
     image: postgres:15

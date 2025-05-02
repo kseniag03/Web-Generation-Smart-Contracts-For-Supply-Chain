@@ -20,6 +20,7 @@ var apiBase = builder.Configuration["API_BASE_URL"] ?? "http://localhost:8080";
 builder.Services.AddHttpClient("with-cookies", (sp, client) =>
 {
     client.BaseAddress = new Uri(apiBase);
+    client.Timeout = TimeSpan.FromMinutes(10);
 })
 .ConfigurePrimaryHttpMessageHandler(sp => new HttpClientHandler
 {

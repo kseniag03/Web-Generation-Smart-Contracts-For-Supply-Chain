@@ -2,7 +2,8 @@
 {
     public interface IHardhatExecutor
     {
-        Task<string> TestContract(string instancePath);
+        Task<string> SetupInstanceEnvironment(string instancePath);
         Task<string> CompileContract(string instancePath);
+        Task<string> TestContract(string instancePath);
     }
 }

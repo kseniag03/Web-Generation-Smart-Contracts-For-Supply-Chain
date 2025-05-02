@@ -22,15 +22,18 @@ namespace Utilities.Helpers
                 CreateNoWindow = true
             };
 
-            using (var process = new Process { StartInfo = processStartInfo })
-            {
-                process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                string error = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
+            using var process = new Process { StartInfo = processStartInfo };
+            process.Start();
 
-                return string.IsNullOrEmpty(error) ? output : error;
-            }
+            var stdOutTask = process.StandardOutput.ReadToEndAsync();
+            var stdErrTask = process.StandardError.ReadToEndAsync();
+
+            await process.WaitForExitAsync();
+
+            var output = await stdOutTask;
+            var error = await stdErrTask;
+
+            return string.IsNullOrWhiteSpace(error) ? output : output + "\n--- STDERR ---\n" + error;
         }
     }
 }
