@@ -2,7 +2,7 @@
 using Nethereum.Web3;
 
 namespace Infrastructure.Blockchain
-{
+{/*
     public class NethereumBlockchainService : IBlockchainService
     {
         private readonly Web3 _web3;
@@ -27,7 +27,7 @@ namespace Infrastructure.Blockchain
         {
             return new { Address = contractAddress, Status = "Active" };
         }
-    }
+    }*/
 }
 
 

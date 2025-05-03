@@ -19,8 +19,8 @@ namespace Application.Services
         {
             return _contractRepository.GenerateContractCode(
                 paramsDto.ContractName,
-                paramsDto.ApplicationArea,
-                paramsDto.UintType,
+                paramsDto.ApplicationArea ?? "IoT",
+                paramsDto.UintType ?? "uint256",
                 paramsDto.EnableEvents,
                 paramsDto.IncludeVoidLabel,
                 instancePath);

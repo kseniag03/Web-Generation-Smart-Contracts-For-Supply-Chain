@@ -20,7 +20,7 @@ namespace Tests.ApplicationTests
         public async Task LoginUser_WithNonExistentUser_ShouldReturnNull()
         {
             _authRepositoryMock.Setup(repo => repo.GetUserByLogin("nonexistent"))
-                .ReturnsAsync((User)null);
+                .ReturnsAsync(null as User);
 
             var result = await _authService.LoginUser("nonexistent", "password123");
 

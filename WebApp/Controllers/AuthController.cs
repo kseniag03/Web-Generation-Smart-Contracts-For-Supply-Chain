@@ -130,21 +130,50 @@ namespace WebApp.Controllers
             return success ? Ok("GitHub linked") : BadRequest("GitHub linking failed");
         }*/
 
-        [HttpPost("link-metamask")]
         [Authorize]
+        [HttpPost("link-metamask")]
         public async Task<IActionResult> LinkMetaMask([FromBody] MetaMaskDto metamask)
         {
-            var success = await _authService.LinkMetaMask(User.Identity.Name, metamask.WalletAddress);
+            var login = User?.Identity?.Name;
+
+            if (string.IsNullOrEmpty(login))
+            {
+                return BadRequest("Null of empty login");
+            }
+
+            var success = await _authService.LinkMetaMask(login, metamask.WalletAddress);
+
             return success ? Ok("MetaMask linked") : BadRequest("MetaMask linking failed");
         }
 
-        [HttpGet("signin-github")]
-        public IActionResult SignInWithGitHub()
+        // [Authorize] // обязательно!
+        [HttpGet("link-github")]
+        public IActionResult LinkGitHub()
         {
+            Console.WriteLine($"Current user at /link-github: {User?.Identity?.Name}");
+
+            if (User?.Identity is null || !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
             var props = new AuthenticationProperties
             {
-                RedirectUri = "/github-callback"
+                RedirectUri = "/oauth-github"
             };
+
+            // сохраняем логин текущего пользователя явно
+            var login = User?.Identity?.Name;
+
+            if (!string.IsNullOrEmpty(login))
+            {
+                props.Items["login"] = login;
+                props.Items["mode"] = "link"; // на будущее
+            }
+            else
+            {
+                return Unauthorized();
+            }
 
             return Challenge(props, "GitHub");
         }
@@ -153,7 +182,15 @@ namespace WebApp.Controllers
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePassword)
         {
-            var success = await _authService.ChangePassword(User.Identity.Name, changePassword.OldPassword, changePassword.NewPassword);
+            var login = User?.Identity?.Name;
+
+            if (string.IsNullOrEmpty(login))
+            {
+                return BadRequest("Null of empty login");
+            }
+
+            var success = await _authService.ChangePassword(login, changePassword.OldPassword, changePassword.NewPassword);
+
             return success ? Ok("Password changed") : BadRequest("Password change failed");
         }
 

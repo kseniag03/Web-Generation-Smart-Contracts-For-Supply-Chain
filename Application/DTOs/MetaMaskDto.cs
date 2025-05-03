@@ -2,6 +2,6 @@
 {
     public class MetaMaskDto
     {
-        public string WalletAddress { get; set; }
+        public required string WalletAddress { get; set; }
     }
 }

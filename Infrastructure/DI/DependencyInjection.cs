@@ -92,8 +92,9 @@ namespace Infrastructure.DI
                 .AddCookie(options =>
                 {
                     options.Cookie.Name = "AppAuth";
-                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.Cookie.SameSite = SameSiteMode.None;
                     options.Cookie.HttpOnly = true;
+                    // для localhost-разработки; в проде ставить Always и HTTPS
                     options.Cookie.SecurePolicy = CookieSecurePolicy.None;
                     options.LoginPath = "/login";
                     options.AccessDeniedPath = "/access-denied";
@@ -120,7 +121,7 @@ namespace Infrastructure.DI
                 {
                     options.ClientId = configuration["GitHubClientId"];
                     options.ClientSecret = configuration["GitHubClientSecret"];
-                    options.CallbackPath = new PathString("/signin-github");
+                    options.CallbackPath = new PathString("/oauth-github");
                     options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
                     options.TokenEndpoint = "https://github.com/login/oauth/access_token";
                     options.UserInformationEndpoint = "https://api.github.com/user";
@@ -141,18 +142,26 @@ namespace Infrastructure.DI
                             var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                             var githubLogin = payload.RootElement.GetProperty("login").GetString();
 
-                            // Получаем текущего пользователя
-                            var userName = context?.Principal?.Identity?.Name;
+                            var login = context.Properties.Items.TryGetValue("login", out var loginValue)
+                                ? loginValue
+                                : context?.Principal?.Identity?.Name;
 
-                            // Получаем нужный сервис из контейнера
-                            var authService = context?.HttpContext.RequestServices.GetRequiredService<AuthService>();
+                            Console.WriteLine($"GitHub login: {githubLogin}, Local login: {login}");
 
-                            if (userName == null || githubLogin == null || authService == null)
+                            if (login == null || githubLogin == null)
                             {
                                 return;
                             }
 
-                            await authService.LinkGitHub(userName, githubLogin);
+                            // Получаем нужный сервис из контейнера
+                            var authService = context?.HttpContext.RequestServices.GetRequiredService<AuthService>();
+
+                            if (authService == null)
+                            {
+                                return;
+                            }
+
+                            await authService.LinkGitHub(login, githubLogin);
                         },
                         OnRemoteFailure = context =>
                         {

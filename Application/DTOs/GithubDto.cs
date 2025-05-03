@@ -2,6 +2,6 @@
 {
     public class GithubDto
     {
-        public string GithubLogin { get; set; }
+        public required string GithubLogin { get; set; }
     }
 }

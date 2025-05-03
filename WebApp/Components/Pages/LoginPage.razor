@@ -144,7 +144,7 @@ else
 
         if (response.IsSuccessStatusCode)
         {
-            user = await response.Content.ReadFromJsonAsync<UserModel>();
+            user = await response.Content.ReadFromJsonAsync<UserModel>() ?? user;
             isAuthenticated = true;
         }
     }
@@ -161,7 +161,7 @@ else
             return;
         }
 
-        user = await response.Content.ReadFromJsonAsync<UserModel>();
+        user = await response.Content.ReadFromJsonAsync<UserModel>() ?? user;
         isAuthenticated = true;
     }
 
@@ -170,21 +170,41 @@ else
         var client = ClientFactory.CreateClient("with-cookies");
         await client.PostAsync("/api/auth/change-password", null);
     }
+
+    private void ConnectGitHub()
+    {
+        // ① Browser issues GET /api/auth/link-github
+        //     → Set-Cookie: .AspNetCore.Correlation.GitHub=…
+        //     → 302 Location: https://github.com/login/oauth/authorize?…
+        // ② Browser follows that 302 to GitHub with the cookies in place
+        NavManager.NavigateTo("/api/auth/link-github", forceLoad: true);
+    }
+
     /*
     private async Task ConnectGitHub()
     {
-        var response = await Http.PostAsync("/api/auth/link-github", null);
+        var client = ClientFactory.CreateClient("with-cookies");
+        var response = await client.GetAsync("/api/auth/link-github");
 
-        if (response.IsSuccessStatusCode)
+        if (response.StatusCode == System.Net.HttpStatusCode.Redirect)
         {
-            user.Role = "auditor";
+            // This is the /login/oauth/authorize?… URL that ASP.NET just issued
+            var githubAuthUrl = response.Headers.Location!.ToString();
+
+            // Now hand it over to the browser (including cookies - real GitHub page)
+            NavManager.NavigateTo(githubAuthUrl, forceLoad: true);
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Console.Error.WriteLine("Not authenticated with the server yet.");
+        }
+        else
+        {
+            // something else went sideways
+            var body = await response.Content.ReadAsStringAsync();
+            Console.Error.WriteLine($"Unexpected {response.StatusCode}: {body}");
         }
     }*/
-
-    private async Task ConnectGitHub()
-    {
-        NavManager.NavigateTo("/api/auth/signin-github", forceLoad: true);
-    }
 
     private async Task ConnectMetaMask()
     {

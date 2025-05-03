@@ -50,6 +50,9 @@ namespace Infrastructure.Repositories
                 GitHubId = string.Empty
             };
 
+            await _dbContext.Users.AddAsync(newUser);
+            await _dbContext.SaveChangesAsync(); // init IdUser
+
             var passwordHash = _passwordHasher.HashPassword(newUser, password);
 
             newUser.Userauth = new Userauth
@@ -59,8 +62,6 @@ namespace Infrastructure.Repositories
             };
 
             await RoleHelper.AssignRole(_dbContext, newUser, RoleType.Tester);
-
-            _dbContext.Users.Add(newUser);
 
             await _dbContext.SaveChangesAsync();
 
@@ -88,7 +89,7 @@ namespace Infrastructure.Repositories
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
 
-            if (user == null)
+            if (user == null || user.Userauth == null)
             {
                 return false;
             }
@@ -109,7 +110,7 @@ namespace Infrastructure.Repositories
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
 
-            if (user == null)
+            if (user == null || user.Userauth == null)
             {
                 return false;
             }

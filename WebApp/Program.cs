@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,7 +26,8 @@ builder.Services.AddHttpClient("with-cookies", (sp, client) =>
 .ConfigurePrimaryHttpMessageHandler(sp => new HttpClientHandler
 {
     UseCookies = true,
-    CookieContainer = sp.GetRequiredService<CookieContainer>()
+    CookieContainer = sp.GetRequiredService<CookieContainer>(),
+    AllowAutoRedirect = false     // very important
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -62,8 +64,22 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ContractsDbContext>();
-    db.Database.Migrate();
-    await Infrastructure.DI.DependencyInjection.SeedAsync(app.Services);
+
+    try
+    {
+        db.Database.Migrate();
+        await Infrastructure.DI.DependencyInjection.SeedAsync(app.Services);
+    }
+    catch (PostgresException ex) when (ex.SqlState == "42P07")
+    {
+        // Table already exists, continue silently
+        var message = ex.Message;
+    }
+    catch (Exception ex)
+    {
+        // another problem
+        var message = ex.Message;
+    }
 }
 
 app.Run();

@@ -377,18 +377,18 @@
 
     private class ContractResponse
     {
-        public string ContractName { get; set; }
-        public string Code { get; set; }
+        public string ContractName { get; set; } = "DefaultContractName";
+        public string? Code { get; set; }
     }
 
     private class ContractParams
     {
-        public string ContractName { get; set; }
-        public string ApplicationArea { get; set; }
-        public string UintType { get; set; }
+        public string ContractName { get; set; } = "DefaultContractName";
+        public string? ApplicationArea { get; set; }
+        public string? UintType { get; set; }
         public bool EnableEvents { get; set; }
         public bool IncludeVoidLabel { get; set; }
-        public string TargetOs { get; set; }
+        public string? TargetOs { get; set; }
     }
 
     private class UserModel
