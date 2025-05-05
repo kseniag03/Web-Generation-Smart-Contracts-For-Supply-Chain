@@ -1,4 +1,6 @@
-﻿using Core.Entities;
+﻿using Application.Common;
+using Application.Mappings;
+using Core.Entities;
 using Core.Enums;
 using Core.Interfaces;
 using Infrastructure.Data;
@@ -19,7 +21,7 @@ namespace Infrastructure.Repositories
             _passwordHasher = new PasswordHasher<User>();
         }
 
-        public async Task<User?> GetUserByLogin(string login)
+        public async Task<UserResult> GetUserByLogin(string login)
         {
             var user = await _dbContext.Users
                 .Include(u => u.Userauth)
@@ -28,17 +30,17 @@ namespace Infrastructure.Repositories
 
             if (user == null || user.Userauth == null)
             {
-                return null;
+                return UserResult.Fail("User not found or authorization data is missing");
             }
 
-            return user;
+            return UserResult.Ok(user.ToDto());
         }
 
-        public async Task<User?> RegisterUser(string login, string password, string? email)
+        public async Task<UserResult> RegisterUser(string login, string password, string? email)
         {
             if (await _dbContext.Users.AnyAsync(u => u.Login == login))
             {
-                return null; // Логин уже занят
+                return UserResult.Fail("Login is already taken");
             }
 
             var newUser = new User
@@ -51,7 +53,7 @@ namespace Infrastructure.Repositories
             };
 
             await _dbContext.Users.AddAsync(newUser);
-            await _dbContext.SaveChangesAsync(); // init IdUser
+            await _dbContext.SaveChangesAsync();
 
             var passwordHash = _passwordHasher.HashPassword(newUser, password);
 
@@ -62,13 +64,12 @@ namespace Infrastructure.Repositories
             };
 
             await RoleHelper.AssignRole(_dbContext, newUser, RoleType.Tester);
-
             await _dbContext.SaveChangesAsync();
 
-            return newUser;
+            return UserResult.Ok(newUser.ToDto());
         }
 
-        public async Task<User?> LoginUser(string login, string password)
+        public async Task<UserResult> LoginUser(string login, string password)
         {
             var user = await _dbContext.Users
                 .Include(u => u.Userauth)
@@ -78,12 +79,14 @@ namespace Infrastructure.Repositories
 
             if (user == null || user.Userauth == null)
             {
-                return null;
+                return UserResult.Fail("User not found or authorization data is missing");
             }
 
             var result = _passwordHasher.VerifyHashedPassword(user, user.Userauth.PasswordHash, password);
 
-            return result == PasswordVerificationResult.Success ? user : null;
+            return result == PasswordVerificationResult.Success
+                ? UserResult.Ok(user.ToDto())
+                : UserResult.Fail("Wrong password");
         }
 
         public async Task<string?> GetGitHubId(string login)
@@ -94,7 +97,7 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<bool> LinkGitHub(string login, string githubId)
+        public async Task<BoolResult> LinkGitHub(string login, string githubId)
         {
             var user = await _dbContext.Users
                 .Include(u => u.Userauth)
@@ -103,27 +106,23 @@ namespace Infrastructure.Repositories
 
             if (user == null || user.Userauth == null)
             {
-                return false;
+                return BoolResult.Fail("User not found or authorization data is missing");
+            }
+
+            if (string.IsNullOrEmpty(githubId))
+            {
+                return BoolResult.Fail("Provided Github Id is empty");
             }
 
             user.GitHubId = githubId;
 
-            if (!string.IsNullOrEmpty(user.GitHubId))
-            {
-                await RoleHelper.AssignRole(_dbContext, user, RoleType.Auditor);
-            }
-
-            var entry = _dbContext.Entry(user);
-
-            Console.WriteLine(entry.State);                            // должен быть Modified
-            Console.WriteLine(entry.Property(u => u.GitHubId).IsModified); // должен быть true
-
+            await RoleHelper.AssignRole(_dbContext, user, RoleType.Auditor);
             await _dbContext.SaveChangesAsync();
 
-            return true;
+            return BoolResult.Ok();
         }
 
-        public async Task<bool> LinkMetaMask(string login, string walletAddress)
+        public async Task<BoolResult> LinkMetaMask(string login, string walletAddress)
         {
             var user = await _dbContext.Users
                 .Include(u => u.Userauth)
@@ -133,7 +132,12 @@ namespace Infrastructure.Repositories
 
             if (user == null || user.Userauth == null)
             {
-                return false;
+                return BoolResult.Fail("User not found or authorization data is missing");
+            }
+
+            if (string.IsNullOrEmpty(walletAddress))
+            {
+                return BoolResult.Fail("Provided Wallet Address is empty");
             }
 
             var walletExists = await _dbContext.Wallets
@@ -141,9 +145,7 @@ namespace Infrastructure.Repositories
 
             if (walletExists)
             {
-                Console.WriteLine("This wallet address is already linked");
-
-                return false;
+                return BoolResult.Fail("Provided Wallet Address is already linked");
             }
 
             var wallet = new Wallet
@@ -156,18 +158,12 @@ namespace Infrastructure.Repositories
             user.Wallets.Add(wallet);
 
             await RoleHelper.AssignRole(_dbContext, user, RoleType.Deployer);
-
-            var entry = _dbContext.Entry(user);
-
-            Console.WriteLine(entry.State);                            // должен быть Modified
-            Console.WriteLine(entry.Property(u => u.GitHubId).IsModified); // должен быть true
-
             await _dbContext.SaveChangesAsync();
 
-            return true;
+            return BoolResult.Ok();
         }
 
-        public async Task<bool> ChangePassword(string login, string oldPassword, string newPassword)
+        public async Task<BoolResult> ChangePassword(string login, string oldPassword, string newPassword)
         {
             var user = await _dbContext.Users
                 .Include(u => u.Userauth)
@@ -175,23 +171,21 @@ namespace Infrastructure.Repositories
 
             if (user == null || user.Userauth == null)
             {
-                return false;
+                return BoolResult.Fail("User not found or authorization data is missing");
             }
 
             var result = _passwordHasher.VerifyHashedPassword(user, user.Userauth.PasswordHash, oldPassword);
 
             if (result != PasswordVerificationResult.Success)
             {
-                Console.WriteLine("Wrong password");
-
-                return false; // Старый пароль неверный
+                return BoolResult.Fail("Wrong password");
             }
 
             user.Userauth.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
             
             await _dbContext.SaveChangesAsync();
 
-            return true;
+            return BoolResult.Ok();
         }
     }
 }

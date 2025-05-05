@@ -94,27 +94,23 @@ namespace Infrastructure.DI
                 {
                     options.Cookie.Name = "AppAuth";
                     options.Cookie.SameSite = SameSiteMode.None;
-                    // для localhost-разработки; в проде ставить Always и HTTPS
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.Cookie.HttpOnly = true;
                     options.LoginPath = "/login";
                     options.AccessDeniedPath = "/access-denied";
 
-                    // переопределяем поведение для API‑маршрутов
                     options.Events = new CookieAuthenticationEvents
                     {
-                        OnRedirectToLogin = ctx =>
+                        OnRedirectToLogin = context =>
                         {
-                            // если это «системный» запрос с login-страницы — оставить 302
-                            if (ctx.Request.Path.StartsWithSegments("/api") && !ctx.Request.Path.StartsWithSegments("/api/auth/me"))
+                            if (context.Request.Path.StartsWithSegments("/api"))
                             {
-                                // для /api/** – отдать 401, а не 302
-                                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                                return Task.CompletedTask;
+                                // context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                                // return Task.CompletedTask;
                             }
 
-                            // для обычных страниц сохраняем редирект
-                            ctx.Response.Redirect(ctx.RedirectUri);
+                            context.Response.Redirect(context.RedirectUri);
+
                             return Task.CompletedTask;
                         }
                     };
@@ -137,7 +133,7 @@ namespace Infrastructure.DI
                     // options.ClaimActions.MapJsonKey(ClaimTypes.Name, "login");
                     options.ClaimActions.MapJsonKey(ClaimTypes.Email, "email", "email");
 
-                    options.ClaimActions.MapJsonKey("urn:github:login", "login");   // кастомный
+                    options.ClaimActions.MapJsonKey("urn:github:login", "login");
 
                     options.Events = new OAuthEvents
                     {
@@ -162,7 +158,6 @@ namespace Infrastructure.DI
                                 ? loginValue
                                 : context?.Principal?.Identity?.Name;
 
-                            // 2. GitHub-логин из кастомного claim’а
                             var githubLogin = context?.Principal?.FindFirst("urn:github:login")?.Value;
 
                             Console.WriteLine($"GitHub login: {githubLogin}, Local login: {login}");
@@ -172,7 +167,6 @@ namespace Infrastructure.DI
                                 return;
                             }
 
-                            // Получаем нужный сервис из контейнера
                             var authService = context?.HttpContext.RequestServices.GetRequiredService<AuthService>();
 
                             if (authService == null)
@@ -184,11 +178,11 @@ namespace Infrastructure.DI
                             {
                                 await authService.LinkGitHub(login, githubLogin);
 
-                                var userDto = await authService.GetUserByLogin(login);
+                                var result = await authService.GetUserByLogin(login);
 
-                                if (userDto is null) return;
+                                if (!result.Succeeded || result.Payload is null) return;
 
-                                // дополняем ТЕКУЩИЙ principal, полученный от GitHub
+                                var userDto = result.Payload;
                                 var id = (ClaimsIdentity)context?.Principal!.Identity!;
                                 var oldName = id.FindFirst(ClaimTypes.Name);
 
@@ -203,7 +197,6 @@ namespace Infrastructure.DI
                                     return;
                                 }
 
-                                // сохраняем в AppAuth куку
                                 await context.HttpContext.SignInAsync(
                                     CookieAuthenticationDefaults.AuthenticationScheme,
                                     context.Principal,
@@ -218,23 +211,19 @@ namespace Infrastructure.DI
                             {
                                 var message = ex.Message;
 
-                                // Если надо прервать вход:
-                                // ctx.Fail("Аккаунт уже привязан к другому пользователю");
-                                // return;
+                                // context.Fail("Account is already linked to another user");
+                                return;
                             }
                         },
                         OnRemoteFailure = context =>
                         {
-                            // сбросить корреляцию, если осталась
                             context.Response.Cookies.Delete(".AspNetCore.Correlation.GitHub");
 
-                            // Перенаправляем обратно на /login с сообщением об ошибке
                             var error = Uri.EscapeDataString("GitHub authorization was denied.");
 
                             Console.WriteLine($"OAuth Error: {context.Failure?.Message}");
                             Console.WriteLine($"Error: {error}");
 
-                            // Перенаправляем на страницу с ошибкой
                             context.Response.Redirect($"/login?errorMessage={error}");
                             context.HandleResponse();
 

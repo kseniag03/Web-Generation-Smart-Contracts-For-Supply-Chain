@@ -1,5 +1,5 @@
-﻿using Application.Services;
-using Core.Entities;
+﻿using Application.Common;
+using Application.Services;
 using Core.Interfaces;
 using Moq;
 
@@ -17,36 +17,30 @@ namespace Tests.ApplicationTests
         }
 
         [Fact]
-        public async Task LoginUser_WithNonExistentUser_ShouldReturnNull()
+        public async Task LoginUser_WithNonExistentUser_ShouldReturnFailure()
         {
-            _authRepositoryMock.Setup(repo => repo.GetUserByLogin("nonexistent"))
-                .ReturnsAsync(null as User);
+            _authRepositoryMock.Setup(repo => repo.LoginUser("nonexistent", "password123"))
+                .ReturnsAsync(UserResult.Fail("Пользователь не найден или данные авторизации отсутствуют."));
 
             var result = await _authService.LoginUser("nonexistent", "password123");
 
-            Assert.Null(result);
+            Assert.False(result.Succeeded);
+            Assert.Null(result.Payload);
+            Assert.Equal("Пользователь не найден или данные авторизации отсутствуют.", result.Error);
         }
 
         [Fact]
-        public async Task LoginUser_WithIncorrectPassword_ShouldReturnNull()
+        public async Task LoginUser_WithIncorrectPassword_ShouldReturnFailure()
         {
-            var user = new User
-            {
-                IdUser = 1,
-                Login = "existingUser",
-                Userauth = new Userauth
-                {
-                    IdUser = 1,
-                    PasswordHash = "correctpassword"
-                }
-            };
-
-            _authRepositoryMock.Setup(repo => repo.GetUserByLogin("existingUser"))
-                .ReturnsAsync(user);
+            _authRepositoryMock
+                .Setup(repo => repo.LoginUser("existingUser", "wrongpassword"))
+                .ReturnsAsync(UserResult.Fail("Неверный пароль."));
 
             var result = await _authService.LoginUser("existingUser", "wrongpassword");
 
-            Assert.Null(result);
+            Assert.False(result.Succeeded);
+            Assert.Null(result.Payload);
+            Assert.Equal("Неверный пароль.", result.Error);
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Application.DTOs;
-using Application.Mappings;
+﻿using Application.Common;
 using Core.Interfaces;
 
 namespace Application.Services
@@ -13,25 +12,19 @@ namespace Application.Services
             _authRepository = authRepository;
         }
 
-        public async Task<UserDto?> GetUserByLogin(string login)
+        public async Task<UserResult> GetUserByLogin(string login)
         {
-            var user = await _authRepository.GetUserByLogin(login);
-
-            return user?.ToDto();
+            return await _authRepository.GetUserByLogin(login);
         }
 
-        public async Task<UserDto?> RegisterUser(string login, string password, string? email)
+        public async Task<UserResult> RegisterUser(string login, string password, string? email)
         {
-            var user = await _authRepository.RegisterUser(login, password, email);
-
-            return user?.ToDto();
+            return await _authRepository.RegisterUser(login, password, email);
         }
 
-        public async Task<UserDto?> LoginUser(string login, string password)
+        public async Task<UserResult> LoginUser(string login, string password)
         {
-            var user = await _authRepository.LoginUser(login, password);
-
-            return user?.ToDto();
+            return await _authRepository.LoginUser(login, password);
         }
 
         public async Task<string?> GetGitHubId(string login)
@@ -39,26 +32,19 @@ namespace Application.Services
             return await _authRepository.GetGitHubId(login);
         }
 
-        public async Task<bool> LinkGitHub(string login, string githubId)
+        public async Task<BoolResult> LinkGitHub(string login, string githubId)
         {
             return await _authRepository.LinkGitHub(login, githubId);
         }
 
-        public async Task<bool> LinkMetaMask(string login, string walletAddress)
+        public async Task<BoolResult> LinkMetaMask(string login, string walletAddress)
         {
             return await _authRepository.LinkMetaMask(login, walletAddress);
         }
 
-        public async Task<bool> ChangePassword(string login, string oldPassword, string newPassword)
+        public async Task<BoolResult> ChangePassword(string login, string oldPassword, string newPassword)
         {
             return await _authRepository.ChangePassword(login, oldPassword, newPassword);
-        }
-
-        private bool IsAuthorized(string userRole, string requiredRole)
-        {
-            var roleHierarchy = new[] { "User", "Tester", "Auditor", "Deployer", "Admin" };
-
-            return Array.IndexOf(roleHierarchy, userRole) >= Array.IndexOf(roleHierarchy, requiredRole);
         }
     }
 }

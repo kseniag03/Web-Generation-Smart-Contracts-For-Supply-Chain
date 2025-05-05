@@ -7,10 +7,21 @@ window.apiLogin = async function (url, data) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     });
+
+    const text = await resp.text();
+    let payload = null;
+
+    try {
+        payload = JSON.parse(text);
+    } catch {}
+
     if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(text || resp.status);
+        const msg = payload && payload.message
+            ? payload.message
+            : text || `Error ${resp.status}`;
+
+        throw msg;
     }
-    const result = await resp.json();
-    return result;
+
+    return payload;
 };

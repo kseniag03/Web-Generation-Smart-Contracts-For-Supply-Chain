@@ -262,3 +262,10 @@ h1:focus {
 .error-message {
     color: red;
 }
+
+.password-form {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    transition: all 0.3s ease;
+}

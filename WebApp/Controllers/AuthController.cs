@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace WebApp.Controllers
 {
@@ -31,9 +30,7 @@ namespace WebApp.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Logout error: {ex.Message}");
-
-                return StatusCode(500, "Internal Server Error: " + ex.Message);
+                return StatusCode(500, $"Logout error: {ex.Message}");
             }
         }
 
@@ -42,26 +39,22 @@ namespace WebApp.Controllers
         {
             try
             {
-                var token = await _authService.LoginUser(login.Login, login.Password);
+                var result = await _authService.LoginUser(login.Login, login.Password);
 
-                if (token is null)
+                if (!result.Succeeded || result.Payload is null)
                 {
-                    return Unauthorized(new { message = "Invalid credentials" });
+                    return Unauthorized(new { message = result.Error ?? "Invalid credentials" });
                 }
+
+                var token = result.Payload;
 
                 await SetupCookie(token, login.RememberMe);
 
                 return Ok(token);
             }
-            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("users_login_key") == true)
-            {
-                return Conflict(new { message = "Login already exists" });
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Login error: {ex.Message}");
-
-                return StatusCode(500, "Internal Server Error: " + ex.Message);
+                return StatusCode(500, $"Login error: {ex.Message}");
             }
         }
 
@@ -70,109 +63,142 @@ namespace WebApp.Controllers
         {
             try
             {
-                var token = await _authService.RegisterUser(register.Login, register.Password, register.Email);
+                var result = await _authService.RegisterUser(register.Login, register.Password, register.Email);
 
-                if (token is null)
+                if (!result.Succeeded || result.Payload is null)
                 {
-                    return BadRequest(new { message = "Registration failed" });
+                    return BadRequest(new { message = result.Error ?? "Registration failed" });
                 }
+
+                var token = result.Payload;
 
                 await SetupCookie(token);
 
                 return Ok(token);
             }
-            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("users_login_key") == true)
-            {
-                return Conflict(new { message = "Login already exists" });
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Login error: {ex.Message}");
-
-                return StatusCode(500, "Internal Server Error: " + ex.Message);
+                return StatusCode(500, $"Register error: {ex.Message}");
             }
-
         }
 
-        // доступ: auditor  OR  deployer  OR  admin
         [Authorize(Roles = "auditor,deployer,admin")]
         [HttpPost("link-metamask")]
         public async Task<IActionResult> LinkMetaMask([FromBody] MetaMaskDto metamask)
         {
-            var login = User?.Identity?.Name;
-
-            if (string.IsNullOrEmpty(login))
+            try
             {
-                return BadRequest(new { message = "Null of empty login" });
+                var login = User?.Identity?.Name;
+
+                if (string.IsNullOrEmpty(login))
+                {
+                    return Unauthorized(new { message = "Null of empty login" });
+                }
+
+                var result = await _authService.LinkMetaMask(login, metamask.WalletAddress);
+
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new { message = result.Error ?? "MetaMask linking failed" });
+                }
+
+                var userResult = await _authService.GetUserByLogin(login);
+
+                if (!userResult.Succeeded || userResult.Payload is null)
+                {
+                    return Unauthorized(new { message = result.Error ?? "Cannot extract current user" });
+                }
+
+                var token = userResult.Payload;
+
+                await SetupCookie(token, remember: true);
+
+                return Ok(new { message = "MetaMask linked" });
             }
-
-            var success = await _authService.LinkMetaMask(login, metamask.WalletAddress);
-
-            var userDto = await _authService.GetUserByLogin(login);
-
-            if (userDto is null)
+            catch (Exception ex)
             {
-                return BadRequest(new { message = "Cannot extract current user" });
+                return StatusCode(500, $"Link MetaMask error: {ex.Message}");
             }
-
-            await SetupCookie(userDto, remember: true);
-
-            return success
-                ? Ok(new { message = "MetaMask linked" })
-                : BadRequest(new { message = "MetaMask linking failed" });
         }
 
-        // roles allowed to link or relink GitHub
         [Authorize(Roles = "tester,admin")]
         [HttpGet("link-github")]
         public async Task<IActionResult> LinkGitHub()
         {
-            Console.WriteLine($"Current user at /link-github: {User?.Identity?.Name}");
-
-            if (User?.Identity is null || !User.Identity.IsAuthenticated)
+            try
             {
-                return Unauthorized();
+                Console.WriteLine($"Current user at /link-github: {User?.Identity?.Name}");
+
+                if (User?.Identity is null || !User.Identity.IsAuthenticated)
+                {
+                    return Unauthorized();
+                }
+
+                var login = User?.Identity?.Name;
+
+                if (string.IsNullOrEmpty(login))
+                {
+                    return Unauthorized();
+                }
+
+                var githubId = await _authService.GetGitHubId(login);
+
+                if (!string.IsNullOrEmpty(githubId))
+                {
+                    return Conflict(new { message = "GitHub already linked" });
+                }
+
+                var props = new AuthenticationProperties
+                {
+                    RedirectUri = "/login"
+                };
+
+                props.Items["login"] = login;
+
+                return Challenge(props, "GitHub");
             }
-
-            var login = User?.Identity?.Name;
-
-            if (string.IsNullOrEmpty(login))
+            catch (Exception ex)
             {
-                return Unauthorized();
+                return StatusCode(500, $"Link GitHub error: {ex.Message}");
             }
-
-            // уже есть GitHubId? 409 Conflict
-            var githubId = await _authService.GetGitHubId(login);
-
-            if (!string.IsNullOrEmpty(githubId))
-            {
-                return Conflict(new { message = "GitHub already linked" });
-            }
-
-            var props = new AuthenticationProperties
-            {
-                RedirectUri = "/login"
-            };
-
-            props.Items["login"] = login;
-            props.Items["mode"] = "link"; // на будущее
-
-            return Challenge(props, "GitHub");
         }
 
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePassword)
         {
-            var login = User?.Identity?.Name;
-
-            if (string.IsNullOrEmpty(login))
+            try
             {
-                return BadRequest(new { message = "Null of empty login" });
+                var login = User?.Identity?.Name;
+
+                if (string.IsNullOrEmpty(login))
+                {
+                    return BadRequest(new { message = "Null of empty login" });
+                }
+
+                var result = await _authService.ChangePassword(login, changePassword.OldPassword, changePassword.NewPassword);
+
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new { message = result.Error ?? "Password change failed" });
+                }
+
+                var userResult = await _authService.GetUserByLogin(login);
+
+                if (!userResult.Succeeded || userResult.Payload is null)
+                {
+                    return Unauthorized(new { message = result.Error ?? "Cannot extract current user" });
+                }
+
+                var token = userResult.Payload;
+
+                await SetupCookie(token, remember: true);
+
+                return Ok(new { message = "Password changed" });
             }
-
-            var success = await _authService.ChangePassword(login, changePassword.OldPassword, changePassword.NewPassword);
-
-            return success ? Ok(new { message = "Password changed" }) : BadRequest(new { message = "Password change failed" });
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Password change error: {ex.Message}");
+            }
         }
 
         private async Task SetupCookie(UserDto user, bool remember = false)
@@ -202,7 +228,7 @@ namespace WebApp.Controllers
                 principal,
                 new AuthenticationProperties
                 {
-                    IsPersistent = remember,          // «запомнить меня»
+                    IsPersistent = remember,
                     ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7),
                     AllowRefresh = true
                 }

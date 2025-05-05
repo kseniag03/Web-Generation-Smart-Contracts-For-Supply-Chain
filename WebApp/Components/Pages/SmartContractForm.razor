@@ -146,6 +146,8 @@
             {
                 user.Login = state.User.Identity!.Name!;
                 user.Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
+                user.GitHubId = state.User.FindFirst("urn:github:login")?.Value;
+                user.WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value;
 
                 canTest = IsInRole(user, "Tester", "Auditor", "Deployer", "Admin");
                 canAudit = IsInRole(user, "Auditor", "Deployer", "Admin");
@@ -160,8 +162,6 @@
 
     private async Task GenerateContract()
     {
-        Console.WriteLine("Кнопка нажата!");
-
         isEditing = true;
         testingOutput.Clear();
         responseMessage = "Processing...";
