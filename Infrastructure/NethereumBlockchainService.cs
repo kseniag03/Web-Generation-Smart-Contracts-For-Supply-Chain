@@ -1,7 +1,4 @@
-﻿using Core.Interfaces;
-using Nethereum.Web3;
-
-namespace Infrastructure.Blockchain
+﻿namespace Infrastructure.Blockchain
 {/*
     public class NethereumBlockchainService : IBlockchainService
     {

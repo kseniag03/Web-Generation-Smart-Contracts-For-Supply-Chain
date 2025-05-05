@@ -39,8 +39,7 @@ namespace Infrastructure.Data
                     .HasMaxLength(50)
                     .HasColumnName("action_status");
                 entity.Property(e => e.CreatedAt)
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                    .HasColumnType("timestamp without time zone")
+                    .HasDefaultValueSql("now() at time zone 'utc'")
                     .HasColumnName("created_at");
                 entity.Property(e => e.Details).HasColumnName("details");
                 entity.Property(e => e.IdContract).HasColumnName("id_contract");
@@ -87,8 +86,7 @@ namespace Infrastructure.Data
                     .HasColumnName("contract_address");
                 entity.Property(e => e.ContractData).HasColumnName("contract_data");
                 entity.Property(e => e.CreatedAt)
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                    .HasColumnType("timestamp without time zone")
+                    .HasDefaultValueSql("now() at time zone 'utc'")
                     .HasColumnName("created_at");
                 entity.Property(e => e.GuidContract)
                     .HasDefaultValueSql("gen_random_uuid()")
@@ -191,8 +189,7 @@ namespace Infrastructure.Data
                     .HasMaxLength(255)
                     .HasColumnName("address");
                 entity.Property(e => e.CreatedAt)
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                    .HasColumnType("timestamp without time zone")
+                    .HasDefaultValueSql("now() at time zone 'utc'")
                     .HasColumnName("created_at");
                 entity.Property(e => e.IdUser).HasColumnName("id_user");
 

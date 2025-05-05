@@ -38,7 +38,7 @@ namespace Tests.WebTests
         public void GenerateContract_ShouldDisplayContractCode()
         {
             // Arrange
-            _driver.Navigate().GoToUrl("https://localhost:7255");
+            _driver.Navigate().GoToUrl("https://localhost:5000");
             var inputField = _driver.FindElement(By.CssSelector("input[placeholder='Enter contract name']"));
             var generateButton = _driver.FindElement(By.CssSelector("button.custom-btn"));
 

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ContractsDbContext))]
-    [Migration("20250501153737_Initial")]
+    [Migration("20250505094435_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -39,11 +39,11 @@ namespace Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("action_status");
 
-                    b.Property<DateTime?>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasDefaultValueSql("now() at time zone 'utc'");
 
                     b.Property<string>("Details")
                         .HasColumnType("text")
@@ -109,11 +109,11 @@ namespace Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("contract_data");
 
-                    b.Property<DateTime?>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasDefaultValueSql("now() at time zone 'utc'");
 
                     b.Property<Guid>("GuidContract")
                         .ValueGeneratedOnAdd()
@@ -222,11 +222,11 @@ namespace Infrastructure.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("address");
 
-                    b.Property<DateTime?>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasDefaultValueSql("now() at time zone 'utc'");
 
                     b.Property<int?>("IdUser")
                         .HasColumnType("integer")

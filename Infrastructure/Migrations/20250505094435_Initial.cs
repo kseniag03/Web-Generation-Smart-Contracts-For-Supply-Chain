@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -92,7 +91,7 @@ namespace Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityAlwaysColumn),
                     id_user = table.Column<int>(type: "integer", nullable: true),
                     address = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now() at time zone 'utc'")
                 },
                 constraints: table =>
                 {
@@ -117,7 +116,7 @@ namespace Infrastructure.Migrations
                     contract_data = table.Column<string>(type: "text", nullable: true),
                     contract_address = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now() at time zone 'utc'")
                 },
                 constraints: table =>
                 {
@@ -146,7 +145,7 @@ namespace Infrastructure.Migrations
                     id_contract = table.Column<int>(type: "integer", nullable: true),
                     action_status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     details = table.Column<string>(type: "text", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: true, defaultValueSql: "CURRENT_TIMESTAMP")
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now() at time zone 'utc'")
                 },
                 constraints: table =>
                 {

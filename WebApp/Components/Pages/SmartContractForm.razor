@@ -1,5 +1,6 @@
 ﻿@using Application.DTOs
 @using System.Text.Json
+@inject AuthenticationStateProvider Auth
 @inject NavigationManager NavManager
 @inject IHttpClientFactory ClientFactory
 @inject IJSRuntime JS
@@ -138,26 +139,22 @@
     {
         try
         {
-            var client = ClientFactory.CreateClient("with-cookies");
-            var response = await client.GetAsync("/api/auth/me");
+            var state = await Auth.GetAuthenticationStateAsync();
+            var isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
 
-            if (response.IsSuccessStatusCode)
+            if (isAuthenticated)
             {
-                var userModel = await response.Content.ReadFromJsonAsync<UserModel>();
-
-                if (userModel is null) {
-                    return;
-                }
-
-                user = userModel;
+                user.Login = state.User.Identity!.Name!;
+                user.Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
 
                 canTest = IsInRole(user, "Tester", "Auditor", "Deployer", "Admin");
                 canAudit = IsInRole(user, "Auditor", "Deployer", "Admin");
                 canDeploy = IsInRole(user, "Deployer", "Admin");
             }
         }
-        catch
+        catch (Exception ex)
         {
+            var message = ex.Message;
         }
     }
 

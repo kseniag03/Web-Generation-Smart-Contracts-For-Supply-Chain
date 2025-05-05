@@ -1,8 +1,9 @@
 ﻿@page "/login"
 @rendermode InteractiveServer
+@inject AuthenticationStateProvider Auth
 @inject IHttpClientFactory ClientFactory
-@inject NavigationManager NavManager
 @inject IJSRuntime JS
+@inject NavigationManager NavManager
 
 <h3>Authentication</h3>
 
@@ -47,29 +48,24 @@ else
 
         <button class="auth-btn" @onclick="ChangePassword">Change Password</button>
 
-        @if (user.Role == "tester")
+        @{
+            var role = user.Role ?? "user";
+            var showGitHub = AtLeast(role, "tester") && string.IsNullOrEmpty(user.GitHubId);
+            var showMetaMask = AtLeast(role, "auditor") && (AllowManyWallets || string.IsNullOrEmpty(user.WalletAddress));
+        }
+
+        @if (showGitHub)
         {
             <button class="auth-btn" @onclick="ConnectGitHub">Connect GitHub</button>
         }
-
-        @if (user.Role == "auditor")
+        @if (showMetaMask)
         {
             <button class="auth-btn" @onclick="ConnectMetaMask">Connect MetaMask</button>
         }
 
-        @if (string.IsNullOrEmpty(user.GitHubId))
+        @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <button class="auth-btn" @onclick="ConnectGitHub">Connect GitHub</button>
-        }
-
-        @if (string.IsNullOrEmpty(user.WalletAddress))
-        {
-            <button class="auth-btn" @onclick="ConnectMetaMask">Connect MetaMask</button>
-        }
-
-        @if (!string.IsNullOrEmpty(githubErrorMessage))
-        {
-            <p class="error-message">@githubErrorMessage</p>
+            <p class="error-message">@errorMessage</p>
         }
 
         <button class="auth-btn logout" @onclick="Logout">Log Out</button>
@@ -80,49 +76,42 @@ else
     private bool isAuthenticated = false;
     private bool isSignIn = true;
     private string registrationMessage = "";
-    private string? githubErrorMessage;
+    private string? errorMessage;
 
     private LoginModel loginModel = new();
     private RegisterModel registerModel = new();
     private UserModel user = new();
 
+    private const bool AllowManyWallets = false;
+
     protected override async Task OnInitializedAsync()
     {
-        githubErrorMessage = null;
+        errorMessage = null;
 
         var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
 
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("errorMessage", out var errorMsg))
         {
-            githubErrorMessage = errorMsg;
+            errorMessage = errorMsg;
         }
 
         try
         {
-            var client = ClientFactory.CreateClient("with-cookies");
-            var response = await client.GetAsync("/api/auth/me");
+            var state = await Auth.GetAuthenticationStateAsync();
 
-            if (response.IsSuccessStatusCode)
+            isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+
+            if (isAuthenticated)
             {
-                var userModel = await response.Content.ReadFromJsonAsync<UserModel>();
-
-                if (userModel is null)
-                {
-                    return;
-                }
-
-                user = userModel;
-
-                isAuthenticated = true;
-            }
-            else
-            {
-                // Если пришел 401, значит пользователь не авторизован
-                isAuthenticated = false;
+                user.Login = state.User.Identity!.Name!;
+                user.Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
+                user.GitHubId = state.User.FindFirst("urn:github:login")?.Value;
+                user.WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            var message = ex.Message;
             // На всякий случай, вдруг сервер вообще недоступен
             isAuthenticated = false;
         }
@@ -138,31 +127,40 @@ else
 
     private async Task SignIn()
     {
-        var fullUrl = "/api/auth/login";
-        var client = ClientFactory.CreateClient("with-cookies");
-        var response = await client.PostAsJsonAsync(fullUrl, loginModel);
-
-        if (response.IsSuccessStatusCode)
+        try
         {
-            user = await response.Content.ReadFromJsonAsync<UserModel>() ?? user;
+            // вызвать fetch(url, body) и получить UserModel
+            user = await JS.InvokeAsync<UserModel>(
+                "apiLogin",
+                "/api/auth/login",
+                loginModel
+            );
+
             isAuthenticated = true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Login failed: {ex.Message}");
         }
     }
 
     private async Task SignUp()
     {
-        var fullUrl = "/api/auth/register";
-        var client = ClientFactory.CreateClient("with-cookies");
-        var response = await client.PostAsJsonAsync(fullUrl, registerModel);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            registrationMessage = "Username already exists.";
-            return;
-        }
+            // вызвать fetch(url, body) и получить UserModel
+            user = await JS.InvokeAsync<UserModel>(
+                "apiLogin",
+                "/api/auth/register",
+                registerModel
+            );
 
-        user = await response.Content.ReadFromJsonAsync<UserModel>() ?? user;
-        isAuthenticated = true;
+            isAuthenticated = true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Register failed: {ex.Message}");
+        }
     }
 
     private async Task ChangePassword()
@@ -173,71 +171,57 @@ else
 
     private void ConnectGitHub()
     {
-        // ① Browser issues GET /api/auth/link-github
-        //     → Set-Cookie: .AspNetCore.Correlation.GitHub=…
-        //     → 302 Location: https://github.com/login/oauth/authorize?…
-        // ② Browser follows that 302 to GitHub with the cookies in place
         NavManager.NavigateTo("/api/auth/link-github", forceLoad: true);
     }
 
-    /*
-    private async Task ConnectGitHub()
-    {
-        var client = ClientFactory.CreateClient("with-cookies");
-        var response = await client.GetAsync("/api/auth/link-github");
-
-        if (response.StatusCode == System.Net.HttpStatusCode.Redirect)
-        {
-            // This is the /login/oauth/authorize?… URL that ASP.NET just issued
-            var githubAuthUrl = response.Headers.Location!.ToString();
-
-            // Now hand it over to the browser (including cookies - real GitHub page)
-            NavManager.NavigateTo(githubAuthUrl, forceLoad: true);
-        }
-        else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            Console.Error.WriteLine("Not authenticated with the server yet.");
-        }
-        else
-        {
-            // something else went sideways
-            var body = await response.Content.ReadAsStringAsync();
-            Console.Error.WriteLine($"Unexpected {response.StatusCode}: {body}");
-        }
-    }*/
-
     private async Task ConnectMetaMask()
     {
-        var accounts = await JS.InvokeAsync<string[]>("myWeb3Functions.connectMetaMask");
-
-        if (accounts.Length > 0)
+        try
         {
-            var client = ClientFactory.CreateClient("with-cookies");
-            var response = await client.PostAsJsonAsync("/api/auth/link-metamask", new { Address = accounts[0] });
+            var accounts = await JS.InvokeAsync<string[]>("myWeb3Functions.connectMetaMask");
 
-            if (response.IsSuccessStatusCode)
+            if (accounts.Length > 0)
             {
-                user.Role = "deployer";
+                // вернёт строку "MetaMask linked" или ошибку
+                await JS.InvokeVoidAsync(
+                    "apiLogin",
+                    "/api/auth/link-metamask",
+                    new { walletAddress = accounts[0] }
+                );
+
+                var state = await Auth.GetAuthenticationStateAsync();
+                user.WalletAddress = accounts[0];
             }
+            else
+            {
+                errorMessage = "MetaMask returned empty account list";
+                Console.Error.WriteLine($"No metamask accounts");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"MetaMask error: {ex.Message}";
+            Console.Error.WriteLine(errorMessage);
         }
     }
 
-    private async Task Logout()
+    private void Logout()
     {
-        var client = ClientFactory.CreateClient("with-cookies");
-        var response = await client.PostAsync("/api/auth/logout", null);
+        NavManager.NavigateTo("/logout", forceLoad: true);
+    }
 
-        if (response.IsSuccessStatusCode)
-        {
-            isAuthenticated = false;
-            user = new UserModel();
+    // порядок иерархии: user < tester < auditor < deployer < admin
+    private static readonly string[] RoleRank =
+        { "user", "tester", "auditor", "deployer", "admin" };
 
-            NavManager.NavigateTo("/login", forceLoad: true);
-        }
-        else
-        {
-            Console.WriteLine("Logout failed");
-        }
+    private static bool AtLeast(string? role, string min)
+    {
+        if (role is null) return false;
+
+        var idx = Array.IndexOf(RoleRank, role.Trim().ToLowerInvariant());
+        var minIdx = Array.IndexOf(RoleRank, min.Trim().ToLowerInvariant());
+
+        return idx >= 0 && idx >= minIdx;
     }
 
     private class LoginModel

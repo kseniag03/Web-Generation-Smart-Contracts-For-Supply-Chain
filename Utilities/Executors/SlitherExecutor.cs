@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Utilities.Interfaces;
-using Utilities.Repositories.Helpers;
 
 namespace Utilities.Executors
 {

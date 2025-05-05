@@ -34,6 +34,11 @@ namespace Application.Services
             return user?.ToDto();
         }
 
+        public async Task<string?> GetGitHubId(string login)
+        {
+            return await _authRepository.GetGitHubId(login);
+        }
+
         public async Task<bool> LinkGitHub(string login, string githubId)
         {
             return await _authRepository.LinkGitHub(login, githubId);

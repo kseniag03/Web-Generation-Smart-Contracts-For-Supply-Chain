@@ -16,7 +16,7 @@ public partial class Smartcontract
 
     public string? Status { get; set; }
 
-    public DateTime? CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
     public virtual ICollection<Actionlog> Actionlogs { get; set; } = new List<Actionlog>();
 

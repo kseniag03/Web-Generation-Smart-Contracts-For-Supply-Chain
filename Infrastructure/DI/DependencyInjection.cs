@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Application.Services;
 using Core.Entities;
 using Core.Enums;
@@ -83,7 +84,7 @@ namespace Infrastructure.DI
             return services;
         }
 
-        private static void AddExtraAuthOptions(
+        private static IServiceCollection AddExtraAuthOptions(
             this IServiceCollection services,
             IConfiguration configuration)
         {
@@ -93,9 +94,9 @@ namespace Infrastructure.DI
                 {
                     options.Cookie.Name = "AppAuth";
                     options.Cookie.SameSite = SameSiteMode.None;
-                    options.Cookie.HttpOnly = true;
                     // для localhost-разработки; в проде ставить Always и HTTPS
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.HttpOnly = true;
                     options.LoginPath = "/login";
                     options.AccessDeniedPath = "/access-denied";
 
@@ -104,7 +105,8 @@ namespace Infrastructure.DI
                     {
                         OnRedirectToLogin = ctx =>
                         {
-                            if (ctx.Request.Path.StartsWithSegments("/api"))
+                            // если это «системный» запрос с login-страницы — оставить 302
+                            if (ctx.Request.Path.StartsWithSegments("/api") && !ctx.Request.Path.StartsWithSegments("/api/auth/me"))
                             {
                                 // для /api/** – отдать 401, а не 302
                                 ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -119,19 +121,32 @@ namespace Infrastructure.DI
                 })
                 .AddOAuth("GitHub", options =>
                 {
-                    options.ClientId = configuration["GitHubClientId"];
-                    options.ClientSecret = configuration["GitHubClientSecret"];
+                    options.ClientId = configuration["GitHubClientId"] ?? throw new ArgumentException("Not found GitHubClientId in configs");
+                    options.ClientSecret = configuration["GitHubClientSecret"] ?? throw new ArgumentException("Not found GitHubClientSecret in configs");
                     options.CallbackPath = new PathString("/oauth-github");
                     options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
                     options.TokenEndpoint = "https://github.com/login/oauth/access_token";
                     options.UserInformationEndpoint = "https://api.github.com/user";
 
-                    options.ClaimActions.MapJsonKey("login", "login");
+                    options.CorrelationCookie.Name = ".AspNetCore.Correlation.GitHub";
+                    options.CorrelationCookie.SameSite = SameSiteMode.None;
+                    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.CorrelationCookie.Path = options.CallbackPath;
+
+                    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+                    // options.ClaimActions.MapJsonKey(ClaimTypes.Name, "login");
+                    options.ClaimActions.MapJsonKey(ClaimTypes.Email, "email", "email");
+
+                    options.ClaimActions.MapJsonKey("urn:github:login", "login");   // кастомный
 
                     options.Events = new OAuthEvents
                     {
                         OnCreatingTicket = async context =>
                         {
+                            var http = context.HttpContext;
+
+                            if (http is null) return;
+
                             var userInfoEndpoint = context.Options.UserInformationEndpoint;
                             var request = new HttpRequestMessage(HttpMethod.Get, userInfoEndpoint);
                             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", context.AccessToken);
@@ -140,11 +155,15 @@ namespace Infrastructure.DI
                             response.EnsureSuccessStatusCode();
 
                             var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-                            var githubLogin = payload.RootElement.GetProperty("login").GetString();
+
+                            context.RunClaimActions(payload.RootElement);
 
                             var login = context.Properties.Items.TryGetValue("login", out var loginValue)
                                 ? loginValue
                                 : context?.Principal?.Identity?.Name;
+
+                            // 2. GitHub-логин из кастомного claim’а
+                            var githubLogin = context?.Principal?.FindFirst("urn:github:login")?.Value;
 
                             Console.WriteLine($"GitHub login: {githubLogin}, Local login: {login}");
 
@@ -161,10 +180,54 @@ namespace Infrastructure.DI
                                 return;
                             }
 
-                            await authService.LinkGitHub(login, githubLogin);
+                            try
+                            {
+                                await authService.LinkGitHub(login, githubLogin);
+
+                                var userDto = await authService.GetUserByLogin(login);
+
+                                if (userDto is null) return;
+
+                                // дополняем ТЕКУЩИЙ principal, полученный от GitHub
+                                var id = (ClaimsIdentity)context?.Principal!.Identity!;
+                                var oldName = id.FindFirst(ClaimTypes.Name);
+
+                                if (oldName is not null) id.RemoveClaim(oldName);
+
+                                id.AddClaim(new Claim(ClaimTypes.Role, userDto.Role.ToLowerInvariant()));
+                                id.AddClaim(new Claim(ClaimTypes.Name, login));
+                                id.AddClaim(new Claim("urn:github:login", githubLogin));
+
+                                if (context is null || context.Principal is null)
+                                {
+                                    return;
+                                }
+
+                                // сохраняем в AppAuth куку
+                                await context.HttpContext.SignInAsync(
+                                    CookieAuthenticationDefaults.AuthenticationScheme,
+                                    context.Principal,
+                                    new AuthenticationProperties
+                                    {
+                                        IsPersistent = true,
+                                        ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7),
+                                        AllowRefresh = true
+                                    });
+                            }
+                            catch (Exception ex)
+                            {
+                                var message = ex.Message;
+
+                                // Если надо прервать вход:
+                                // ctx.Fail("Аккаунт уже привязан к другому пользователю");
+                                // return;
+                            }
                         },
                         OnRemoteFailure = context =>
                         {
+                            // сбросить корреляцию, если осталась
+                            context.Response.Cookies.Delete(".AspNetCore.Correlation.GitHub");
+
                             // Перенаправляем обратно на /login с сообщением об ошибке
                             var error = Uri.EscapeDataString("GitHub authorization was denied.");
 
@@ -180,7 +243,7 @@ namespace Infrastructure.DI
                     };
                 });
 
-
+            return services;
         }
     }
 }

@@ -8,7 +8,7 @@ public partial class Wallet
 
     public string Address { get; set; } = null!;
 
-    public DateTime? CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
     public virtual User? IdUserNavigation { get; set; }
 

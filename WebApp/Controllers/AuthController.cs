@@ -20,35 +20,14 @@ namespace WebApp.Controllers
             _authService = authService;
         }
 
-        [Authorize]
-        [HttpGet("me")]
-        public async Task<IActionResult> GetCurrentUser()
-        {
-            var login = User.Identity?.Name;
-
-            if (string.IsNullOrEmpty(login))
-            {
-                return Unauthorized();
-            }
-
-            var user = await _authService.GetUserByLogin(login);
-
-            if (user is null)
-            {
-                return NotFound();
-            }
-
-            return Ok(user);
-        }
-
-        [HttpPost("logout")]
+        [HttpGet("/logout")]
         public async Task<IActionResult> Logout()
         {
             try
             {
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                return Ok();
+                return Redirect("/login");
             }
             catch (Exception ex)
             {
@@ -67,16 +46,16 @@ namespace WebApp.Controllers
 
                 if (token is null)
                 {
-                    return Unauthorized("Invalid credentials");
+                    return Unauthorized(new { message = "Invalid credentials" });
                 }
 
-                await SetupCookie(token);
+                await SetupCookie(token, login.RememberMe);
 
                 return Ok(token);
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("users_login_key") == true)
             {
-                return Conflict("Login already exists");
+                return Conflict(new { message = "Login already exists" });
             }
             catch (Exception ex)
             {
@@ -95,7 +74,7 @@ namespace WebApp.Controllers
 
                 if (token is null)
                 {
-                    return BadRequest("Registration failed");
+                    return BadRequest(new { message = "Registration failed" });
                 }
 
                 await SetupCookie(token);
@@ -104,7 +83,7 @@ namespace WebApp.Controllers
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("users_login_key") == true)
             {
-                return Conflict("Login already exists");
+                return Conflict(new { message = "Login already exists" });
             }
             catch (Exception ex)
             {
@@ -115,22 +94,8 @@ namespace WebApp.Controllers
 
         }
 
-        [HttpGet("check-username")]
-        public IActionResult CheckUsername(string name)
-        {
-            bool exists = false; // _authService.IsUsernameTaken(name);
-            return exists ? Conflict("Username already taken") : Ok();
-        }
-        /*
-        [HttpPost("link-github")]
-        [Authorize]
-        public async Task<IActionResult> LinkGithub([FromBody] GithubDto github)
-        {
-            var success = await _authService.LinkGitHub(User.Identity.Name, github.GithubLogin);
-            return success ? Ok("GitHub linked") : BadRequest("GitHub linking failed");
-        }*/
-
-        [Authorize]
+        // доступ: auditor  OR  deployer  OR  admin
+        [Authorize(Roles = "auditor,deployer,admin")]
         [HttpPost("link-metamask")]
         public async Task<IActionResult> LinkMetaMask([FromBody] MetaMaskDto metamask)
         {
@@ -138,17 +103,29 @@ namespace WebApp.Controllers
 
             if (string.IsNullOrEmpty(login))
             {
-                return BadRequest("Null of empty login");
+                return BadRequest(new { message = "Null of empty login" });
             }
 
             var success = await _authService.LinkMetaMask(login, metamask.WalletAddress);
 
-            return success ? Ok("MetaMask linked") : BadRequest("MetaMask linking failed");
+            var userDto = await _authService.GetUserByLogin(login);
+
+            if (userDto is null)
+            {
+                return BadRequest(new { message = "Cannot extract current user" });
+            }
+
+            await SetupCookie(userDto, remember: true);
+
+            return success
+                ? Ok(new { message = "MetaMask linked" })
+                : BadRequest(new { message = "MetaMask linking failed" });
         }
 
-        // [Authorize] // обязательно!
+        // roles allowed to link or relink GitHub
+        [Authorize(Roles = "tester,admin")]
         [HttpGet("link-github")]
-        public IActionResult LinkGitHub()
+        public async Task<IActionResult> LinkGitHub()
         {
             Console.WriteLine($"Current user at /link-github: {User?.Identity?.Name}");
 
@@ -157,55 +134,79 @@ namespace WebApp.Controllers
                 return Unauthorized();
             }
 
-            var props = new AuthenticationProperties
-            {
-                RedirectUri = "/oauth-github"
-            };
-
-            // сохраняем логин текущего пользователя явно
             var login = User?.Identity?.Name;
 
-            if (!string.IsNullOrEmpty(login))
-            {
-                props.Items["login"] = login;
-                props.Items["mode"] = "link"; // на будущее
-            }
-            else
+            if (string.IsNullOrEmpty(login))
             {
                 return Unauthorized();
             }
+
+            // уже есть GitHubId? 409 Conflict
+            var githubId = await _authService.GetGitHubId(login);
+
+            if (!string.IsNullOrEmpty(githubId))
+            {
+                return Conflict(new { message = "GitHub already linked" });
+            }
+
+            var props = new AuthenticationProperties
+            {
+                RedirectUri = "/login"
+            };
+
+            props.Items["login"] = login;
+            props.Items["mode"] = "link"; // на будущее
 
             return Challenge(props, "GitHub");
         }
 
         [HttpPost("change-password")]
-        [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePassword)
         {
             var login = User?.Identity?.Name;
 
             if (string.IsNullOrEmpty(login))
             {
-                return BadRequest("Null of empty login");
+                return BadRequest(new { message = "Null of empty login" });
             }
 
             var success = await _authService.ChangePassword(login, changePassword.OldPassword, changePassword.NewPassword);
 
-            return success ? Ok("Password changed") : BadRequest("Password change failed");
+            return success ? Ok(new { message = "Password changed" }) : BadRequest(new { message = "Password change failed" });
         }
 
-        private async Task SetupCookie(UserDto user)
+        private async Task SetupCookie(UserDto user, bool remember = false)
         {
             var claims = new List<Claim>
             {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Login),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.Role, user.Role.ToLowerInvariant())
             };
+
+            if (!string.IsNullOrEmpty(user.GitHubId))
+            {
+                claims.Add(new Claim("urn:github:login", user.GitHubId));
+            }
+
+            if (!string.IsNullOrEmpty(user.WalletAddress))
+            {
+                claims.Add(new Claim("urn:wallet:address", user.WalletAddress));
+            }
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = remember,          // «запомнить меня»
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7),
+                    AllowRefresh = true
+                }
+            );
         }
     }
 }

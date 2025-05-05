@@ -11,12 +11,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    .AddInteractiveWebAssemblyComponents()
+    .AddAuthenticationStateSerialization();
+
+builder.Services.AddCascadingAuthenticationState();
 
 var cookieJar = new CookieContainer();
 builder.Services.AddSingleton(cookieJar);
 
-var apiBase = builder.Configuration["API_BASE_URL"] ?? "http://localhost:8080";
+var apiBase = builder.Configuration["API_BASE_URL"] ?? throw new ArgumentException("Not found API_BASE_URL in configs");
 
 builder.Services.AddHttpClient("with-cookies", (sp, client) =>
 {
@@ -31,7 +35,10 @@ builder.Services.AddHttpClient("with-cookies", (sp, client) =>
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAuthorization();
+
 builder.Services.AddUtilities();
+
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"));
