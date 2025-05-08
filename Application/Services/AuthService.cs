@@ -1,5 +1,5 @@
 ﻿using Application.Common;
-using Core.Interfaces;
+using Application.Interfaces;
 
 namespace Application.Services
 {

@@ -1,7 +1,7 @@
 ﻿
 using Application.DTOs;
+using Application.Interfaces;
 using Application.Services;
-using Core.Interfaces;
 using Moq;
 
 namespace Tests.ApplicationTests
@@ -26,14 +26,7 @@ namespace Tests.ApplicationTests
             _contractRepositoryMock.Setup(repo => repo.GenerateContractCode(contractName, "area", "uint8", false, false, string.Empty))
                 .Returns(expectedCode);
 
-            var dto = new ContractParamsDto { 
-                ContractName = contractName,
-                ApplicationArea = "area",
-                UintType = "uint8",
-                EnableEvents = false,
-                IncludeVoidLabel = false,
-                TargetOs = "windows",
-            };
+            var dto = new ContractParamsDto { };
 
             // Act
             var result = _smartContractService.GenerateContractCode(dto, string.Empty);

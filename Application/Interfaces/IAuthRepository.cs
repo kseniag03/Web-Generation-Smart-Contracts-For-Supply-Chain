@@ -1,6 +1,6 @@
 ﻿using Application.Common;
 
-namespace Core.Interfaces
+namespace Application.Interfaces
 {
     public interface IAuthRepository
     {

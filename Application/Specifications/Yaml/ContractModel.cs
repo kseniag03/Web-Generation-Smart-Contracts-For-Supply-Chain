@@ -1,17 +1,26 @@
-﻿using YamlDotNet.Serialization;
+﻿using Application.Common;
+using YamlDotNet.Serialization;
 
 namespace Application.Specifications.Yaml
 {
     public class ContractModel
     {
+        public ContractModel()
+        {
+            ContractName = AppConstants.DefaultContractName;
+            Spdx = AppConstants.DefaultSpdx;
+            Pragma = AppConstants.DefaultPragma;
+            IdType = AppConstants.DefaultIdType;
+        }
+
         [YamlMember(Alias = "contractName")]
-        public string ContractName { get; set; } = "DefaultName";
+        public string ContractName { get; set; }
 
         [YamlMember(Alias = "spdx")]
-        public string Spdx { get; set; } = "MIT";
+        public string Spdx { get; set; }
 
         [YamlMember(Alias = "pragma")]
-        public string Pragma { get; set; } = "^0.8.22";
+        public string Pragma { get; set; }
 
         [YamlMember(Alias = "imports")]
         public List<string> Imports { get; set; } = new();
@@ -23,7 +32,7 @@ namespace Application.Specifications.Yaml
         public bool EnableAccessControl { get; set; } = false;
 
         [YamlMember(Alias = "idType")]
-        public string IdType { get; set; } = "uint256";
+        public string IdType { get; set; }
 
         [YamlMember(Alias = "constants")]
         public List<ConstantModel> Constants { get; set; } = new();

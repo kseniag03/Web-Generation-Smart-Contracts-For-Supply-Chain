@@ -44,7 +44,7 @@ namespace WebApp.Controllers
                         await _hh.SetupInstanceEnvironment(instancePath);
                     }
 
-                    return new { paramsDto.ContractName, code, instancePath };
+                    return new { paramsDto.Area, code, instancePath };
                 },
                 result => Ok(result)
             );
@@ -57,13 +57,13 @@ namespace WebApp.Controllers
                 paramsDto,
                 instancePath =>
                 {
-                    var code = _contractService.GetContractCode(paramsDto.ContractName, instancePath);
+                    var code = _contractService.GetContractCode(paramsDto.Area, instancePath);
 
                     return Task.FromResult(code);
                 },
                 code => string.IsNullOrEmpty(code)
                     ? NotFound("Contract code not found")
-                    : Ok(new { paramsDto.ContractName, code })
+                    : Ok(new { paramsDto.Area, code })
             );
         }
 
@@ -76,13 +76,13 @@ namespace WebApp.Controllers
                 paramsDto,
                 instancePath =>
                 {
-                    var address = _contractService.GetDeployedContractAddress(paramsDto.ContractName, instancePath);
+                    var address = _contractService.GetDeployedContractAddress(paramsDto.Area, instancePath);
 
                     return Task.FromResult(address);
                 },
                 address => string.IsNullOrEmpty(address)
                     ? NotFound("Contract is not deployed")
-                    : Ok(new { paramsDto.ContractName, address })
+                    : Ok(new { paramsDto.Area, address })
             );
         }
 
@@ -94,7 +94,7 @@ namespace WebApp.Controllers
                 paramsDto,
                 instancePath =>
                 {
-                    var dto = _contractService.GetContractAbiBytecode(paramsDto.ContractName, instancePath);
+                    var dto = _contractService.GetContractAbiBytecode(paramsDto.Area, instancePath);
 
                     return Task.FromResult(dto);
                 },
@@ -188,7 +188,7 @@ namespace WebApp.Controllers
                 return StatusCode(500, "Internal Server Error: required executor is null");
             }
 
-            if (paramsDto == null || string.IsNullOrEmpty(paramsDto.ContractName))
+            if (paramsDto == null || string.IsNullOrEmpty(paramsDto.Area))
             {
                 return BadRequest("Missing contract parameter");
             }

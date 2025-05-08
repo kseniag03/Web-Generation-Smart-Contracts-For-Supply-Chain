@@ -6,20 +6,27 @@ namespace Infrastructure.Repositories.Helpers
 {
     public static class SpecLoader
     {
-        public static dynamic LoadObjectFromYaml(string path)
+        public static dynamic LoadObjectFromYamlFile(string path)
         {
             var yaml = File.ReadAllText(path);
-            var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                .IgnoreUnmatchedProperties()
-                .Build();
 
-            return deserializer.Deserialize<ContractModel>(yaml);
+            return DeserializeContractModelFromYaml(yaml);
         }
 
-        public static ContractModel LoadModelFromYaml(string path)
+        public static ContractModel LoadModelFromYamlFile(string path)
         {
             var yaml = File.ReadAllText(path);
+
+            return DeserializeContractModelFromYaml(yaml);
+        }
+
+        public static ContractModel LoadModelFromYaml(string yaml)
+        {
+            return DeserializeContractModelFromYaml(yaml);
+        }
+
+        private static ContractModel DeserializeContractModelFromYaml(string yaml)
+        {
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()

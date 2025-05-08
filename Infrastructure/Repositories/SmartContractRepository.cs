@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
-using Core.Interfaces;
+using Application.Interfaces;
 using Core.UseCases;
 using Infrastructure.Repositories.Helpers;
 using Microsoft.Extensions.Configuration;

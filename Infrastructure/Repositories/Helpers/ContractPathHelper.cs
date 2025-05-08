@@ -13,12 +13,11 @@ namespace Infrastructure.Repositories.Helpers
             var json = JsonSerializer.Serialize(dto);
             var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(json));
             var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-            var instancePath = Path.Combine("Instances", hash); // относительный
+            var instancePath = Path.Combine("Instances", hash);
 
             Directory.CreateDirectory(instancePath);
 
             return instancePath;
         }
     }
-
 }

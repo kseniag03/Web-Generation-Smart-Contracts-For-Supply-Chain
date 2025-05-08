@@ -1,6 +1,6 @@
 ﻿using Application.Common;
+using Application.Interfaces;
 using Application.Services;
-using Core.Interfaces;
 using Moq;
 
 namespace Tests.ApplicationTests

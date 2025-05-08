@@ -1,9 +1,10 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Application.Common;
+using Application.Interfaces;
 using Application.Services;
 using Core.Entities;
 using Core.Enums;
-using Core.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Repositories.Helpers;
@@ -35,7 +36,7 @@ namespace Infrastructure.DI
                 }
             }
 
-            var adminLogin = Environment.GetEnvironmentVariable("ADMIN_LOGIN") ?? "admin";
+            var adminLogin = Environment.GetEnvironmentVariable("ADMIN_LOGIN") ?? AppConstants.DefaultAdminLogin;
             var adminPassHash = Environment.GetEnvironmentVariable("ADMIN_PASSHASH");
 
             if (!string.IsNullOrEmpty(adminPassHash) && !await db.Users.AnyAsync(u => u.Login == adminLogin))
@@ -43,9 +44,9 @@ namespace Infrastructure.DI
                 var admin = new User
                 {
                     Login = adminLogin,
-                    Firstname = "System",
-                    Lastname = "Administrator",
-                    Email = "admin@example.com",
+                    Firstname = AppConstants.DefaultAdminFirstname,
+                    Lastname = AppConstants.DefaultAdminLastname,
+                    Email = AppConstants.DefaultAdminEmail,
                     GitHubId = string.Empty
                 };
 

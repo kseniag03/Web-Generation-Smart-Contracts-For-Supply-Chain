@@ -1,6 +1,6 @@
 ﻿using Core.UseCases;
 
-namespace Core.Interfaces
+namespace Application.Interfaces
 {
     public interface ISmartContractRepository
     {

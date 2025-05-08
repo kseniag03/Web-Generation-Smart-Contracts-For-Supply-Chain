@@ -1,9 +1,17 @@
-﻿using YamlDotNet.Serialization;
+﻿using System.Xml.Linq;
+using Application.Common;
+using YamlDotNet.Serialization;
 
 namespace Application.Specifications.Yaml
 {
     public class FunctionModel
     {
+        public FunctionModel()
+        {
+            Name = AppConstants.DefaultFunctionName;
+            Visibility = AppConstants.DefaultFunctionVisibility;
+        }
+
         [YamlMember(Alias = "name")]
         public string Name { get; set; }
 
@@ -20,7 +28,7 @@ namespace Application.Specifications.Yaml
         public List<FieldModel> ReturnParams { get; set; } = new();
 
         [YamlMember(Alias = "body")]
-        public string Body { get; set; }
+        public string? Body { get; set; }
 
         [YamlMember(Alias = "emitEvents")]
         public List<string> EmitEvents { get; set; } = new();

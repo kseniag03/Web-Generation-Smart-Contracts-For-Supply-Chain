@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject AuthenticationStateProvider Auth
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">WebApp</a>
     </div>
@@ -14,11 +16,14 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-list-check-nav-menu" aria-hidden="true"></span> History
-            </NavLink>
-        </div>
+        @if (isAuthenticated)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="counter">
+                    <span class="bi bi-list-check-nav-menu" aria-hidden="true"></span> History
+                </NavLink>
+            </div>
+        }
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="login">
@@ -26,11 +31,42 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-journal-text-nav-menu" aria-hidden="true"></span> AdminMonitoring
-            </NavLink>
-        </div>
+        @if (IsAdmin)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="weather">
+                    <span class="bi bi-journal-text-nav-menu" aria-hidden="true"></span> AdminMonitoring
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
 
+@if (isAuthenticated)
+{
+    <div class="p-3 text-muted small">
+        Logged in as: <strong>@login</strong><br />
+        Role: <strong>@role</strong><br />
+    </div>
+}
+
+@code {
+    private bool isAuthenticated;
+    private string? login;
+    private string? role;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+
+        isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+
+        if (isAuthenticated)
+        {
+            login = state.User.Identity!.Name!;
+            role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
+        }
+    }
+
+    private bool IsAdmin => string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
+}

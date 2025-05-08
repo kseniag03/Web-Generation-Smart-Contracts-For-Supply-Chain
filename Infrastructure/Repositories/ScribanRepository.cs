@@ -3,6 +3,7 @@ using Scriban.Runtime;
 using Microsoft.Extensions.Configuration;
 using Infrastructure.Repositories.Helpers;
 using System.Text.Json;
+using Application.Common;
 
 namespace Infrastructure.Repositories
 {
@@ -25,12 +26,15 @@ namespace Infrastructure.Repositories
             _templatesPath = Path.Combine(_solutionDirectory, tempatesPath);
         }
 
-        public void Init(string areaPath = "Empty")
+        public void Init(
+            string areaPath = AppConstants.DefaultContractAreaPath,
+            string sbnType = AppConstants.DefaultSbnType
+        )
         {
             var yamlPath = Path.Combine(_templatesPath, $"contract-spec-{areaPath}.yaml");
-            var sbnPath = Path.Combine(_templatesPath, "contract.sbn");
+            var sbnPath = Path.Combine(_templatesPath, $"{sbnType}.sbn");
 
-            var spec = SpecLoader.LoadModelFromYaml(yamlPath);
+            var spec = SpecLoader.LoadModelFromYamlFile(yamlPath);
             var template = Template.Parse(File.ReadAllText(sbnPath));
             var ctx = new TemplateContext();
             var script = new ScriptObject();

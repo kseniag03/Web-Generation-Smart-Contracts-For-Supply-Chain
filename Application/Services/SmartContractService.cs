@@ -1,6 +1,6 @@
 ﻿using Application.DTOs;
+using Application.Interfaces;
 using Application.Mappings;
-using Core.Interfaces;
 
 namespace Application.Services
 {
@@ -17,13 +17,7 @@ namespace Application.Services
 
         public string GenerateContractCode(ContractParamsDto paramsDto, string instancePath)
         {
-            return _contractRepository.GenerateContractCode(
-                paramsDto.ContractName,
-                paramsDto.ApplicationArea ?? "IoT",
-                paramsDto.UintType ?? "uint256",
-                paramsDto.EnableEvents,
-                paramsDto.IncludeVoidLabel,
-                instancePath);
+            return string.Empty; // _contractRepository.GenerateContractCode(paramsDto.Area, instancePath);
         }
 
         public string GetContractCode(string contractName, string instancePath)
