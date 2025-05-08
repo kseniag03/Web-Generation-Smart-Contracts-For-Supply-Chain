@@ -1,6 +1,6 @@
 ﻿namespace Utilities.Interfaces
 {
-    public interface ISlitherExecutor
+    public interface ISlitherExecutor : IContractUtilityExecutor
     {
         Task<string> RunAnalysis(string instancePath);
     }

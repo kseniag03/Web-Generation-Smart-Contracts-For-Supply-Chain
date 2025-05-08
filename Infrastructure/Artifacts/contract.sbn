@@ -1,0 +1,172 @@
+{{- func render_modifier(input_text, substring) -}}
+  {{- if ((input_text | string.index_of substring) != -1) -}}
+    {{ input_text }}
+  {{- else if enable_access_control -}}
+    onlyRole({{ input_text }})
+  {{- else if ((input_text | string.index_of "only") != -1) -}}
+    {{ input_text }}
+  {{- else -}}
+    only{{ input_text }}
+  {{- end -}}
+{{- end -}}
+// SPDX-License-Identifier: {{ spdx }}
+pragma solidity {{ pragma }};
+{{ if imports && imports.size > 0 }}
+{{- for imp in imports -}}
+{{ if imp  }}
+import "{{ imp }}";
+{{- end }}
+{{- end -}}
+{{ "\n" }}
+{{- end }}
+contract {{ contract_name }}{{ if inheritance && inheritance.size > 0 }} is {{ inheritance | array.join ", " }}{{ end }} {
+{{- if constants && constants.size > 0 }}
+{{- for c in constants -}}
+{{ if c  }}
+    {{ c.type }} constant {{ c.name }} = {{ c.value }};
+{{- end }}
+{{- end -}}
+{{ "\n" }}
+{{- end }}
+
+{{- if enums && enums.size > 0 }}
+{{- for e in enums -}}
+{{ if e  }}
+    enum {{ e.name }} { {{ e.values | array.join ", " }} }
+{{- end }}
+{{- end -}}
+{{ "\n" }}
+{{- end }}
+
+{{- if structs && structs.size > 0 }}
+{{- for s in structs -}}
+{{ if s  }}
+    struct {{ s.name }} {
+        {{- for fld in s.fields -}}
+        {{- if fld }}
+        {{ fld.type }} {{ fld.name }};
+        {{- end -}}
+        {{- end }}
+    }
+{{ end }}
+{{- end -}}
+{{- end }}
+
+{{- if variables && variables.size > 0 }}
+{{- for v in variables -}}
+{{ if v  }}
+    {{ v.type == 'id_type' ? id_type : v.type }} {{ v.visibility }} {{ v.name }};
+{{- end }}
+{{- end -}}
+{{ "\n" }}
+{{- end }}
+
+{{- if events && events.size > 0 }}
+{{- for e in events -}}
+{{ if e  }}
+    event {{ e.name }}(
+        {{- for p in e.params -}}
+        {{- p.type }} {{ p.name }}{{ if for.last == false }}, {{ end }}
+        {{- end -}}
+    );
+{{- end }}
+{{- end -}}
+{{ "\n" }}
+{{- end }}
+
+{{- if mappings && mappings.size > 0 }}
+{{- for m in mappings -}}
+{{ if m  }}
+    mapping({{ m.key }} => {{ m.value }}) {{ m.visibility }} {{ m.name }};
+{{- end }}
+{{- end -}}
+{{ "\n" }}
+{{- end }}
+
+{{- if enable_access_control == true }}
+{{- if roles && roles.size > 0 }}
+{{- for r in roles -}}
+{{ if r  }}
+    bytes32 public constant {{ r.name }} = keccak256("{{ r.name }}");
+{{- end }}
+{{- end -}}
+{{- end }}
+{{ else }}
+{{- if roles && roles.size > 0 }}
+{{- for r in roles -}}
+{{ if r }}
+    mapping(address => bool) private _isAuthorized{{ r.name }};
+{{- end }}
+{{- end -}}
+{{ "\n" }}
+{{- for r in roles -}}
+{{ if r  }}
+    function set{{ r.name }}Authorization(address account, bool status) external onlyOwner {
+        _isAuthorized{{ r.name }}[account] = status;
+    }
+{{ end }}
+{{- end }}
+{{- for r in roles -}}
+{{ if r  }}
+    modifier only{{ r.name }}() {
+        require(_isAuthorized{{ r.name }}[msg.sender], "Not authorized {{ r.name }}");
+        _;
+    }
+{{ end }}
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{- if custom_modifiers && custom_modifiers.size > 0 }}
+{{- for m in custom_modifiers -}}
+{{ if m  }}
+    modifier {{ m.name }}({{ for arg in m.args }}{{ arg.type }} {{ arg.name }}{{ if for.last }}{{ else }}, {{ end }}{{ end }}) {
+        {{ m.body }}    }
+{{ end }}
+{{- end -}}
+{{- end }}
+
+{{- if (inheritance | array.contains "Ownable") && enable_access_control }}
+    constructor(address initialOwner) {
+        _transferOwnership(initialOwner);
+        _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
+        {{- for r in roles -}}
+        {{- if r }}
+        _grantRole({{ r.name }}, msg.sender);
+        {{- end -}}
+        {{- end }}
+    }
+{{ else if (inheritance | array.contains "Ownable") }}
+    constructor(address initialOwner) {
+        _transferOwnership(initialOwner);
+    }
+{{ else if enable_access_control }}
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        {{- for r in roles -}}
+        {{- if r }}
+        _grantRole({{ r.name }}, msg.sender);
+        {{- end -}}
+        {{- end }}
+    }
+{{ else }}
+    constructor() {}
+{{- end -}}
+
+{{- if functions && functions.size > 0 }}
+{{- for fn in functions -}}
+{{ if fn  }}
+    function {{ fn.name }}({{ for arg in fn.args }}{{ arg.type }} {{ arg.name }}{{ if for.last }}{{ else }}, {{ end }}{{ end }})
+    {{ fn.visibility }}{{ for r in fn.restricted_to }} {{ render_modifier r "(" }}{{ end }}{{- if fn.return_params && fn.return_params.size > 0 }} returns ({{ for r in fn.return_params }}{{ r.type }} {{ r.name }}{{ if for.last }}{{ else }}, {{ end }}{{ end }}){{- end }}
+    {
+        {{ fn.body }}
+        {{- for ev in fn.emit_events -}}
+        {{- if ev }}
+        emit {{ ev }};
+        {{- end -}}
+        {{- end }}
+    }
+{{ end }}
+{{- end -}}
+{{- end -}}
+}

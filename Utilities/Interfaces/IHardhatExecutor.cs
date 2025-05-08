@@ -1,8 +1,7 @@
 ﻿namespace Utilities.Interfaces
 {
-    public interface IHardhatExecutor
+    public interface IHardhatExecutor : IContractUtilityExecutor
     {
-        Task<string> SetupInstanceEnvironment(string instancePath);
         Task<string> CompileContract(string instancePath);
         Task<string> TestContract(string instancePath);
     }

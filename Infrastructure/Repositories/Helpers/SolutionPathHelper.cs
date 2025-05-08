@@ -17,19 +17,37 @@ namespace Infrastructure.Repositories.Helpers
 
             if (!string.IsNullOrEmpty(fromConfig))
             {
-                _cachedPath = fromConfig;
-                return _cachedPath;
+                var dirInfo2 = new DirectoryInfo(fromConfig);
+
+                _cachedPath = GetSolutionPath(dirInfo2);
             }
 
-            // fallback only for local dev
-            var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+            var dirInfo1 = new DirectoryInfo(Directory.GetCurrentDirectory());
 
-            while (dir is not null && !dir.GetFiles("*.sln").Any())
+            _cachedPath = 
+                (
+                    _cachedPath is null 
+                    ? GetSolutionPath(dirInfo1) 
+                    : _cachedPath
+                )
+                ?? throw new InvalidOperationException("Solution directory not found.");
+
+            return _cachedPath;
+        }
+
+        private static string? GetSolutionPath(DirectoryInfo dirInfo)
+        {
+            if (dirInfo is null || !dirInfo.Exists)
             {
-                dir = dir.Parent;
+                return null;
             }
 
-            _cachedPath = dir?.FullName ?? throw new InvalidOperationException("Solution directory not found.");
+            while (dirInfo is not null && !dirInfo.GetFiles("*.sln", SearchOption.AllDirectories).Any() && dirInfo?.Parent is not null)
+            {
+                dirInfo = dirInfo.Parent;
+            }
+
+            _cachedPath = dirInfo?.FullName ?? throw new InvalidOperationException("Solution directory not found.");
 
             return _cachedPath;
         }

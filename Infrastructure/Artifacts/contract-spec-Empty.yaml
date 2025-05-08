@@ -1,0 +1,72 @@
+# contract-spec-Empty.yaml
+contractName:        BaseSupplyChainTemplate
+spdx:                MIT
+pragma:              ^0.8.22
+
+# --- Imports & inheritance (can grow arbitrarily) ---
+imports:
+  - "@openzeppelin/contracts/access/Ownable.sol"
+inheritance:
+  - Ownable
+
+# --- Choose between custom-modifier roles or OpenZeppelin AccessControl ---
+enableAccessControl: false
+
+# --- Custom types, structs, mappings, constants, enums ---
+idType:         &ID uint256      # define an anchor
+
+constants:
+  - name: FEE
+    type: uint256
+    value: 100
+
+enums:
+  - name: DataState
+    values: [OPERABLE, UNOPERABLE]
+
+structs:
+  - name: DataStruct
+    fields:
+      - { name: id,          type: *ID }
+      - { name: description, type: string }
+      - { name: state,       type: DataState }
+
+variables:
+  - { name: lastId, type: *ID, visibility: private }
+
+events:
+  - name: Operated
+    params:
+      - { name: id,          type: *ID }
+      - { name: name,        type: string }
+
+mappings:
+  - name: structMapping
+    visibility: public
+    key:   *ID
+    value: DataStruct
+
+# --- Roles (whether for custom modifiers or AccessControl) ---
+roles:
+  - name: DataKeeper
+  - name: DataCreator
+
+customModifiers: []
+
+# --- Functions & events (any number, totally driven by spec) ---
+functions:
+  - name: CustomFunc
+    args:
+      - { name: id,          type: *ID }
+      - { name: name,        type: string calldata }
+    visibility: external
+    restrictedTo: [ DataCreator ]
+    returnParams:
+      - { name: returnedId,  type: *ID }
+    body: |
+      require(msg.sender != address(0), "Invalid address");
+      structMapping[id] = DataStruct({ id: id, description: name, state: DataState.OPERABLE });
+    emitEvents:
+      - Operated(id, name)
+
+  # any number of other custom functions...

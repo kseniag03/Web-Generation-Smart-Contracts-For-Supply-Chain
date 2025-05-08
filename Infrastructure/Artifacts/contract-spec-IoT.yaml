@@ -1,0 +1,145 @@
+# contract-spec-IoT.yaml
+contractName:        SupplyChainIoT
+spdx:                MIT
+pragma:              ^0.8.22
+
+# --- Imports & inheritance (can grow arbitrarily) ---
+imports:
+  - "@openzeppelin/contracts/access/Ownable.sol"
+inheritance:
+  - Ownable
+
+# --- Choose between custom-modifier roles or OpenZeppelin AccessControl ---
+enableAccessControl: false
+
+# --- Custom types, structs, mappings, constants, enums ---
+idType:         &ID uint256      # define an anchor
+
+constants: []
+
+enums: []
+
+structs:
+  - name: Label
+    fields:
+      - { name: id,          type: *ID }
+      - { name: sender,      type: address }
+      - { name: receiver,    type: address }
+      - { name: sent,        type: bool }
+      - { name: received,    type: bool }
+      - { name: voided,      type: bool }
+  - name: IoTDeviceInfo
+    fields:
+      - { name: device,      type: address }
+      - { name: location,    type: string }
+
+variables: []
+
+events:
+  - name: LabelCreated
+    params:
+      - { name: labelId,     type: *ID }
+      - { name: sender,      type: address }
+      - { name: receiver,    type: address }
+
+  - name: LabelSent
+    params:
+      - { name: labelId,     type: *ID }
+      - { name: sender,      type: address }
+
+  - name: LabelReceived
+    params:
+      - { name: labelId,     type: *ID }
+      - { name: receiver,    type: address }
+
+  - name: LabelVoided
+    params:
+      - { name: labelId,     type: *ID }
+      - { name: by,          type: address }
+
+mappings:
+  - name: labels
+    visibility: public
+    key:   *ID
+    value: Label
+  - name: deviceInfo
+    visibility: public
+    key:   address
+    value: IoTDeviceInfo
+
+# --- Roles (whether for custom modifiers or AccessControl) ---
+roles:
+  - name: LabelCreator
+  - name: IoTSender                   # _isAuthorizedIoTSender   — mapping(address => bool)
+  - name: IoTReceiver                 # _isAuthorizedIoTReceiver — mapping(address => bool)
+  # add more on-the-fly as needed
+
+customModifiers:
+  - name: onlyIoTDevice
+    body: |
+      require(
+        _isAuthorizedIoTSender[msg.sender] || _isAuthorizedIoTReceiver[msg.sender],
+        "Not an authorized IoT device"
+      );
+      _;
+
+# --- Functions & events (any number, totally driven by spec) ---
+functions:
+  - name: createLabel
+    args:
+      - { name: labelId, type: *ID }
+      - { name: sender,  type: address }
+      - { name: receiver,type: address }
+    visibility: external
+    restrictedTo: [ LabelCreator ]
+    body: |
+      require(receiver != address(0), "Invalid receiver address");
+      require(_isAuthorizedIoTSender[sender], "Sender not authorized");
+      require(_isAuthorizedIoTReceiver[receiver], "Receiver not authorized");
+      labels[labelId] = Label({ id: labelId, sender: sender, receiver: receiver, sent: false, received: false, voided: false });
+    emitEvents:
+      - LabelCreated(labelId, sender, receiver)
+
+  - name: markAsSent
+    args:
+      - { name: labelId, type: *ID }
+    visibility: external
+    restrictedTo: [ IoTSender ]
+    body: |
+      Label storage label = labels[labelId];
+      require(label.id != 0, "Label does not exist");
+      require(!label.sent, "Label already marked as sent");
+      require(label.sender == msg.sender, "Not the sender of this label");
+      label.sent = true;
+    emitEvents:
+      - LabelSent(labelId, msg.sender)
+
+  - name: markAsReceived
+    args:
+      - { name: labelId, type: *ID }
+    visibility: external
+    restrictedTo: [ IoTReceiver ]
+    body: |
+      Label storage label = labels[labelId];
+      require(label.id != 0, "Label does not exist");
+      require(label.sent, "Label not marked as sent");
+      require(!label.received, "Label already marked as received");
+      require(label.receiver == msg.sender, "Not the receiver of this label");
+      label.received = true;
+    emitEvents:
+      - LabelReceived(labelId, msg.sender)
+
+  - name: voidLabel
+    args:
+      - { name: labelId, type: *ID }
+    visibility: external
+    restrictedTo: [ onlyIoTDevice ]
+    body: |
+      Label storage label = labels[labelId];
+      require(label.id != 0, "Label does not exist");
+      require(!label.voided, "Label already voided");
+      label.voided = true;
+    emitEvents:
+      - LabelVoided(labelId, msg.sender)
+
+  # any number of other custom functions...

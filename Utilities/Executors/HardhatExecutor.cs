@@ -27,7 +27,9 @@ namespace Utilities.Executors
 
             if (!dir.Exists)
             {
-                throw new Exception($"Directory not found: {absPath}");
+                Console.WriteLine($"Directory not found: {absPath}");
+
+                // throw new Exception($"Directory not found: {absPath}");
             }
 
             var instanceId = new FileInfo(instancePath).Name;

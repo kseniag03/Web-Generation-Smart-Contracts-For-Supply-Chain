@@ -13,6 +13,11 @@ namespace Utilities.Executors
             _cmd = cmd;
         }
 
+        public Task<string> SetupInstanceEnvironment(string instancePath)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<string> GetGasReport(string instancePath, string args = "")
         {
             var script = GetAbsolutePath("Utilities/run-foundry.sh");

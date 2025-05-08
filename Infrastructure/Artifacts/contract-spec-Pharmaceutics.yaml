@@ -1,0 +1,199 @@
+# contract-spec-Pharmaceutics.yaml
+contractName:        SupplyChainPharmaceutics
+spdx:                MIT
+pragma:              ^0.8.22
+
+# --- Imports & inheritance (can grow arbitrarily) ---
+imports:
+  - "@openzeppelin/contracts/access/AccessControl.sol"
+  - "@openzeppelin/contracts/security/Pausable.sol"
+inheritance:
+  - AccessControl
+  - Pausable
+
+# --- Choose between custom-modifier roles or OpenZeppelin AccessControl ---
+enableAccessControl: true
+
+# --- Custom types, structs, mappings, constants, enums ---
+idType:         &ID bytes32      # define an anchor
+
+constants:
+  - name: PENALTY_RATE
+    type: uint256
+    value: 100
+
+enums:
+  - name: AlertState
+    values: [SALEABLE, UNDER_EVALUATION, UNDER_INVESTIGATION, RECALLED]
+
+structs:
+  - name: Batch
+    fields:
+      - { name: gtin,         type: string }
+      - { name: serial,       type: string }
+      - { name: lot,          type: string }
+      - { name: expiry,       type: uint256 }
+      - { name: currentOwner, type: address }
+      - { name: state,        type: AlertState }
+  - name: TempLog
+    fields:
+      - { name: value,        type: int256 }
+      - { name: timestamp,    type: uint256 }
+
+variables: []
+
+events:
+  - name: Commissioned
+    params:
+      - { name: id,          type: *ID }
+      - { name: gtin,        type: string }
+      - { name: serial,      type: string }
+      - { name: lot,         type: string }
+
+  - name: OwnershipTransferred
+    params:
+      - { name: id,          type: *ID }
+      - { name: from,        type: address }
+      - { name: to,          type: address }
+      - { name: epcisEvent,  type: string }
+
+  - name: TemperatureRecorded
+    params:
+      - { name: id,          type: *ID }
+      - { name: value,       type: int256 }
+
+  - name: StateFlagged
+    params:
+      - { name: id,          type: *ID }
+      - { name: newState,    type: AlertState }
+
+  - name: PenaltyApplied
+    params:
+      - { name: id,          type: *ID }
+      - { name: amount,      type: uint256 }
+      - { name: reason,      type: string }
+
+  - name: BatchSnapshot
+    params:
+      - { name: id,          type: *ID }
+      - { name: owner,       type: address }
+      - { name: state,       type: AlertState }
+      - { name: lastTemp,    type: int256 }
+
+mappings:
+  - name: batches
+    visibility: private
+    key:   *ID
+    value: Batch
+  - name: tempHistory
+    visibility: private
+    key:   *ID
+    value: TempLog[]
+
+# --- Roles (whether for custom modifiers or AccessControl) ---
+roles:
+  - name: MANUFACTURER_ROLE
+  - name: DISTRIBUTOR_ROLE
+  - name: DISPENSER_ROLE
+  - name: REGULATOR_ROLE
+  - name: TEMPERATURE_ORACLE_ROLE
+  # add more on-the-fly as needed
+
+customModifiers:
+  - name: onlyRole2
+    args:
+      - { name: r1,          type: bytes32 }
+      - { name: r2,          type: bytes32 }
+    body: |
+      require(hasRole(r1, msg.sender) || hasRole(r2, msg.sender), "Unauthorized");
+      _;
+
+# --- Functions & events (any number, totally driven by spec) ---
+functions:
+  - name: commissionBatch
+    args:
+      - { name: gtin,        type: string calldata }
+      - { name: serial,      type: string calldata }
+      - { name: lot,         type: string calldata }
+      - { name: expiry,      type: uint256 }
+    visibility: external
+    restrictedTo: [ MANUFACTURER_ROLE ]
+    returnParams:
+      - { name: id,          type: *ID }
+    body: |
+      id = keccak256(abi.encodePacked(gtin, serial, lot));
+      require(batches[id].currentOwner == address(0), "Already exists");
+      batches[id] = Batch(gtin, serial, lot, expiry, msg.sender, AlertState.SALEABLE);
+    emitEvents:
+      - Commissioned(id, gtin, serial, lot)
+
+  - name: transferCustody
+    args:
+      - { name: id,          type: *ID }
+      - { name: to,          type: address }
+      - { name: epcisEvent,  type: string calldata }
+    visibility: external
+    restrictedTo: [ "onlyRole2(MANUFACTURER_ROLE, DISTRIBUTOR_ROLE)" ]
+    body: |
+      Batch storage b = batches[id];
+      require(b.state == AlertState.SALEABLE, "Not transferable");
+      require(msg.sender == b.currentOwner,   "Not owner");
+      b.currentOwner = to;
+      emitBatchSnapshot(id);
+    emitEvents:
+      - OwnershipTransferred(id, msg.sender, to, epcisEvent)
+
+  - name: recordTemperature
+    args:
+      - { name: id,          type: *ID }
+      - { name: value,       type: int256 }
+    visibility: external
+    restrictedTo: [ TEMPERATURE_ORACLE_ROLE ]
+    body: |
+      tempHistory[id].push(TempLog(value, block.timestamp));
+
+      // automatic SLA penalty
+      if (value < -100 || value > 100) {
+          _applyPenalty(id, "TEMPERATURE_EXCURSION");
+      }
+    emitEvents:
+      - TemperatureRecorded(id, value)
+
+  - name: flagState
+    args:
+      - { name: id,          type: *ID }
+      - { name: state,       type: AlertState }
+    visibility: external
+    restrictedTo: [ "onlyRole2(MANUFACTURER_ROLE, REGULATOR_ROLE)" ]
+    body: |
+      batches[id].state = state;
+      emitBatchSnapshot(id);
+    emitEvents:
+      - StateFlagged(id, state)
+
+  - name: _applyPenalty
+    args:
+      - { name: id,          type: *ID }
+      - { name: reason,      type: string memory }
+    visibility: internal
+    restrictedTo: []
+    body: |
+      uint256 penalty = PENALTY_RATE;
+      // escrow logic skipped; integrate with payment hub
+    emitEvents:
+      - PenaltyApplied(id, penalty, reason)
+
+  - name: emitBatchSnapshot
+    args:
+      - { name: id,          type: *ID }
+    visibility: internal
+    restrictedTo: []
+    body: |
+      int256 lastTemp = 0;
+      uint len = tempHistory[id].length;
+      if (len > 0) lastTemp = tempHistory[id][len-1].value;
+      Batch storage b = batches[id];
+    emitEvents:
+      - BatchSnapshot(id, b.currentOwner, b.state, lastTemp)
+
+  # any number of other custom functions...
