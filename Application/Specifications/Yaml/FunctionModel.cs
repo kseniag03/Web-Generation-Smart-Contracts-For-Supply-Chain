@@ -1,5 +1,4 @@
-﻿using System.Xml.Linq;
-using Application.Common;
+﻿using Application.Common;
 using YamlDotNet.Serialization;
 
 namespace Application.Specifications.Yaml

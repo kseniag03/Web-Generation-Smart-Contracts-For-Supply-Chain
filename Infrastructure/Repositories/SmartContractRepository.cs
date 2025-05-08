@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.RegularExpressions;
 using Application.Interfaces;
 using Core.UseCases;
 using Infrastructure.Repositories.Helpers;
@@ -10,69 +9,19 @@ namespace Infrastructure.Repositories
     public class SmartContractRepository : ISmartContractRepository
     {
         private readonly string _solutionDirectory;
-        private readonly string _templatesPath;
         private readonly string _configsPath;
 
         public SmartContractRepository(IConfiguration configuration)
         {
-            var tempatesPath = configuration["ContractTemplatesPath"];
             var configsPath = configuration["HardhatConfigsPath"];
 
-            if (string.IsNullOrEmpty(tempatesPath) || string.IsNullOrEmpty(configsPath))
+            if (string.IsNullOrEmpty(configsPath))
             {
-                throw new ArgumentException("Templates or configs path is not found.");
+                throw new ArgumentException("Configs path is not found.");
             }
 
             _solutionDirectory = SolutionPathHelper.GetSolutionRoot(configuration);
-            _templatesPath = Path.Combine(_solutionDirectory, tempatesPath);
             _configsPath = Path.Combine(_solutionDirectory, configsPath);
-        }
-
-        public string GenerateContractCode(string contractName, string appArea, string uintType, bool enableEvents, bool includeVoid, string instancePath)
-        {
-            var filePath = Path.Combine(_templatesPath, "template-contract.sol");
-
-            if (!File.Exists(filePath))
-            {
-                return $"Error: Contract template for '{appArea}' not found in {filePath}";
-            }
-
-            var template = File.ReadAllText(filePath);
-            var processedContract = template;
-            var replacements = new Dictionary<string, string>
-            {
-                { @"\{CONTRACT_NAME\}", contractName },
-                { @"\{UINT_TYPE\}", uintType }
-            };
-
-            foreach (var kvp in replacements)
-            {
-                processedContract = Regex.Replace(processedContract, kvp.Key, kvp.Value);
-            }
-
-            // remove or keep the content between the tags
-            processedContract = Regex.Replace(processedContract,
-                @"\{EVENTS_OPTIONAL\}([\s\S]*?)\{EVENTS_OPTIONAL\}",
-                enableEvents ? "$1" : "",
-                RegexOptions.Multiline);
-
-            processedContract = Regex.Replace(processedContract,
-                @"\{VOID_OPTIONAL\}([\s\S]*?)\{VOID_OPTIONAL\}",
-                includeVoid ? "$1" : "",
-                RegexOptions.Multiline);
-
-            var contractPath = Path.Combine(instancePath, "contracts");
-
-            Directory.CreateDirectory(contractPath);
-
-            var contractFilePath = Path.Combine(contractPath, $"{contractName}.sol");
-
-            File.WriteAllText(contractFilePath, processedContract);
-
-            GenerateTestScript(contractName, enableEvents, includeVoid, instancePath);
-            CopyBaseHardhatConfigs(instancePath);
-
-            return processedContract;
         }
 
         public string GetContractCode(string contractName, string instancePath) => $"contact {contractName} code: WANTED";
@@ -98,41 +47,7 @@ namespace Infrastructure.Repositories
             };
         }
 
-        private void GenerateTestScript(string contractName, bool enableEvents, bool includeVoid, string instancePath)
-        {
-            var filePath = Path.Combine(_templatesPath, "template-test.js");
-
-            if (!File.Exists(filePath))
-            {
-                Console.WriteLine("Error: Test template not found.");
-
-                return;
-            }
-
-            var template = File.ReadAllText(filePath);
-            var processedScript = Regex.Replace(template, @"\{CONTRACT_NAME\}", contractName);
-
-            // remove or keep the content between the tags
-            processedScript = Regex.Replace(processedScript,
-                @"\{EVENTS_OPTIONAL\}([\s\S]*?)\{EVENTS_OPTIONAL\}",
-                enableEvents ? "$1" : "",
-                RegexOptions.Multiline);
-
-            processedScript = Regex.Replace(processedScript,
-                @"\{VOID_OPTIONAL\}([\s\S]*?)\{VOID_OPTIONAL\}",
-                includeVoid ? "$1" : "",
-                RegexOptions.Multiline);
-
-            var testPath = Path.Combine(instancePath, "test");
-
-            Directory.CreateDirectory(testPath);
-
-            var scriptFilePath = Path.Combine(testPath, $"test_{contractName}.js");
-
-            File.WriteAllText(scriptFilePath, processedScript);
-        }
-
-        private void CopyBaseHardhatConfigs(string instancePath)
+        public void CopyBaseHardhatConfigs(string instancePath)
         {
             CopyIfMissing("hardhat.config.ts", instancePath);
             CopyIfMissing("tsconfig.json", instancePath);
@@ -150,6 +65,5 @@ namespace Infrastructure.Repositories
                 File.Copy(source, dest);
             }
         }
-
     }
 }

@@ -13,11 +13,25 @@ namespace Infrastructure.Repositories.Helpers
             return DeserializeContractModelFromYaml(yaml);
         }
 
+        public static async Task<dynamic> LoadObjectFromYamlFileAsync(string path)
+        {
+            var yaml = await File.ReadAllTextAsync(path);
+
+            return LoadModelFromYaml(yaml);
+        }
+
         public static ContractModel LoadModelFromYamlFile(string path)
         {
             var yaml = File.ReadAllText(path);
 
             return DeserializeContractModelFromYaml(yaml);
+        }
+
+        public static async Task<ContractModel> LoadModelFromYamlFileAsync(string path)
+        {
+            var yaml = await File.ReadAllTextAsync(path);
+
+            return LoadModelFromYaml(yaml);
         }
 
         public static ContractModel LoadModelFromYaml(string yaml)

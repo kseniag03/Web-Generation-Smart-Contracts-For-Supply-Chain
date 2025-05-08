@@ -79,7 +79,7 @@ namespace Infrastructure.DI
 
             services.AddScoped<IAuthRepository, AuthRepository>();
             services.AddScoped<ISmartContractRepository, SmartContractRepository>();
-            // services.AddScoped<IScribanRepository, ScribanRepository>();
+            services.AddScoped<ITemplateRepository, ScribanRepository>();
             services.AddScoped<AuthService>();
             services.AddScoped<SmartContractService>();
 

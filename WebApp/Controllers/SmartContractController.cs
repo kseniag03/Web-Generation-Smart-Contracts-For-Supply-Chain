@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Application.DTOs;
+using Application.Services;
 using Utilities.Interfaces;
 using Infrastructure.Repositories.Helpers;
 
@@ -30,34 +30,60 @@ namespace WebApp.Controllers
             _sh = sh;
         }
 
-        [HttpPost("generate")]
-        public async Task<IActionResult> GenerateContractAsync(ContractParamsDto paramsDto)
+        [HttpPost("setup")]
+        public async Task<IActionResult> SetupTemplate([FromBody] ContractParamsDto paramsDto)
         {
             return await ContractAction(
                 paramsDto,
                 async instancePath =>
                 {
-                    var code = _contractService.GenerateContractCode(paramsDto, instancePath);
+                    var yaml = await _contractService.LoadYamlTemplate(paramsDto);
 
-                    if (!string.IsNullOrEmpty(code))
-                    {
-                        await _hh.SetupInstanceEnvironment(instancePath);
-                    }
-
-                    return new { paramsDto.Area, code, instancePath };
+                    return new { yaml };
                 },
                 result => Ok(result)
             );
         }
 
+        [HttpPost("generate")]
+        public Task<IActionResult> GenerateContract([FromBody] ContractParamsDto paramsDto)
+        {
+            return ContractAction(
+                paramsDto,
+                async instancePath =>
+                {
+                    var artefacts = await _contractService.GenerateContractCode(paramsDto, instancePath);
+
+                    if (artefacts is null)
+                    {
+                        return default;
+                    }
+
+                    await _hh.SetupInstanceEnvironment(instancePath);
+
+                    return new
+                    {
+                        paramsDto.Area,
+                        code = artefacts.Code,
+                        testScript = artefacts.TestScript,
+                        gasReport = artefacts.TestGasScript,
+                        instancePath
+                    };
+                },
+                result => Ok(result),
+                requireExecutor: true,
+                executor: _hh
+            );
+        }
+
         [HttpGet("code")]
-        public async Task<IActionResult> GetContractCode(ContractParamsDto paramsDto)
+        public async Task<IActionResult> GetContractCode([FromBody] ContractParamsDto paramsDto)
         {
             return await ContractAction(
                 paramsDto,
                 instancePath =>
                 {
-                    var code = _contractService.GetContractCode(paramsDto.Area, instancePath);
+                    var code = _contractService.GetContractCode(instancePath);
 
                     return Task.FromResult(code);
                 },
@@ -67,16 +93,71 @@ namespace WebApp.Controllers
             );
         }
 
+        [HttpPost("compile")]
+        public async Task<IActionResult> CompileContract([FromBody] ContractParamsDto paramsDto)
+        {
+            return await ContractAction(
+                paramsDto,
+                _hh.CompileContract,
+                result => Ok(new { output = result }),
+                true,
+                _hh
+            );
+        }
+
+        [Authorize(Roles = "tester,auditor,deployer,admin")]
+        [HttpPost("test")]
+        public async Task<IActionResult> TestContract([FromBody] ContractParamsDto paramsDto)
+        {
+            return await ContractAction(
+                paramsDto,
+                async instancePath =>
+                {
+                    _ = await _hh.CompileContract(instancePath);
+
+                    return await _hh.TestContract(instancePath);
+                },
+                result => Ok(new { output = result }),
+                true,
+                _hh
+            );
+        }
+
+        [Authorize(Roles = "tester,auditor,deployer,admin")]
+        [HttpPost("gas-report")]
+        public async Task<IActionResult> GetContractGasReport([FromBody] ContractParamsDto paramsDto)
+        {
+            return await ContractAction(
+                paramsDto,
+                instancePath => _fh.GetGasReport(instancePath),
+                result => Ok(new { output = result }),
+                true,
+                _fh
+            );
+        }
+
+        [Authorize(Roles = "auditor,deployer,admin")]
+        [HttpPost("audit")]
+        public async Task<IActionResult> AuditContract([FromBody] ContractParamsDto paramsDto)
+        {
+            return await ContractAction(
+                paramsDto,
+                _sh.RunAnalysis,
+                result => Ok("Running security audit..."),
+                true,
+                _sh
+            );
+        }
 
         [Authorize(Roles = "deployer,admin")]
         [HttpGet("address")]
-        public async Task<IActionResult> GetDeployedContractAddress(ContractParamsDto paramsDto)
+        public async Task<IActionResult> GetDeployedContractAddress([FromBody] ContractParamsDto paramsDto)
         {
             return await ContractAction(
                 paramsDto,
                 instancePath =>
                 {
-                    var address = _contractService.GetDeployedContractAddress(paramsDto.Area, instancePath);
+                    var address = _contractService.GetDeployedContractAddress(instancePath);
 
                     return Task.FromResult(address);
                 },
@@ -88,13 +169,13 @@ namespace WebApp.Controllers
 
         [Authorize(Roles = "deployer,admin")]
         [HttpGet("abi-bytecode")]
-        public async Task<IActionResult> GetAbiAndBytecode(ContractParamsDto paramsDto)
+        public async Task<IActionResult> GetAbiAndBytecode([FromBody] ContractParamsDto paramsDto)
         {
             return await ContractAction(
                 paramsDto,
                 instancePath =>
                 {
-                    var dto = _contractService.GetContractAbiBytecode(paramsDto.Area, instancePath);
+                    var dto = _contractService.GetContractAbiBytecode(instancePath);
 
                     return Task.FromResult(dto);
                 },
@@ -108,7 +189,7 @@ namespace WebApp.Controllers
         /// <summary>
         /// Получает информацию о контракте из блокчейна
         /// </summary>
-        [HttpGet("{contractAddress}/info")]
+        [HttpGet("contract-info")]
         public async Task<IActionResult> GetContractInfo(string contractAddress)
         {
             var contractInfo = await _contractService.GetContractInfoAsync(contractAddress);
@@ -118,63 +199,6 @@ namespace WebApp.Controllers
             return Ok(contractInfo);
         }
         */
-
-
-        [HttpPost("compile")]
-        public async Task<IActionResult> CompileContract(ContractParamsDto paramsDto)
-        {
-            return await ContractAction(
-                paramsDto,
-                _hh.CompileContract,
-                result => Ok(new { output = result }),
-                true,
-                _hh
-            );
-        }
-
-        [Authorize(Roles = "tester,auditor,deployer,admin")]
-        [HttpPost("test")]
-        public async Task<IActionResult> TestContract(ContractParamsDto paramsDto)
-        {
-            return await ContractAction(
-                paramsDto,
-                async instancePath =>
-                {
-                    await _hh.CompileContract(instancePath);
-
-                    return await _hh.TestContract(instancePath);
-                },
-                result => Ok(new { output = result }),
-                true,
-                _hh
-            );
-        }
-
-        [Authorize(Roles = "tester,auditor,deployer,admin")]
-        [HttpPost("gas-report")]
-        public async Task<IActionResult> GetContractGasReport(ContractParamsDto paramsDto)
-        {
-            return await ContractAction(
-                paramsDto,
-                instancePath => _fh.GetGasReport(instancePath),
-                result => Ok(new { output = result }),
-                true,
-                _fh
-            );
-        }
-
-        [Authorize(Roles = "auditor,deployer,admin")]
-        [HttpPost("audit")]
-        public async Task<IActionResult> AuditContract(ContractParamsDto paramsDto)
-        {
-            return await ContractAction(
-                paramsDto,
-                _sh.RunAnalysis,
-                result => Ok("Running security audit..."),
-                true,
-                _sh
-            );
-        }
 
         private async Task<IActionResult> ContractAction<T>(
             ContractParamsDto paramsDto,
