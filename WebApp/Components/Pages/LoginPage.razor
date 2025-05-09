@@ -151,7 +151,7 @@ else
         {
             // вызвать fetch(url, body) и получить UserModel
             user = await JS.InvokeAsync<UserModel>(
-                "apiLogin",
+                "sendRequestViaBrowser",
                 "/api/auth/login",
                 loginModel
             );
@@ -180,7 +180,7 @@ else
         {
             // вызвать fetch(url, body) и получить UserModel
             user = await JS.InvokeAsync<UserModel>(
-                "apiLogin",
+                "sendRequestViaBrowser",
                 "/api/auth/register",
                 registerModel
             );
@@ -208,7 +208,7 @@ else
         try
         {
             _ = await JS.InvokeAsync<UserModel>(
-                "apiLogin",
+                "sendRequestViaBrowser",
                 "/api/auth/change-password",
                 changePasswordModel
             );
@@ -239,13 +239,13 @@ else
 
         try
         {
-            var accounts = await JS.InvokeAsync<string[]>("myWeb3Functions.connectMetaMask");
+            var accounts = await JS.InvokeAsync<string[]>("web3Functions.connectMetaMask");
 
             if (accounts.Length > 0)
             {
                 // вернёт строку "MetaMask linked" или ошибку
                 await JS.InvokeVoidAsync(
-                    "apiLogin",
+                    "sendRequestViaBrowser",
                     "/api/auth/link-metamask",
                     new { walletAddress = accounts[0] }
                 );

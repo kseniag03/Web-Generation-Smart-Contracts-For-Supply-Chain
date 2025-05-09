@@ -23,19 +23,24 @@
         public const string DefaultStateVariableVisibility = "private";
         public const string DefaultFunctionVisibility = "internal";
 
-        public const string DefaultAdminLogin = "admin";
-        public const string DefaultAdminFirstname = "System";
-        public const string DefaultAdminLastname = "Administrator";
-        public const string DefaultAdminEmail = "admin@example.com";
+        public const string AdminLogin = "admin";
+        public const string AdminFirstname = "System";
+        public const string AdminLastname = "Administrator";
+        public const string AdminEmail = "admin@example.com";
 
-        public const string DefaultEmptyContractAreaPath = "Empty";
-        public const string DefaultIoTContractAreaPath = "IoT";
-        public const string DefaultPharmaceuticsContractAreaPath = "Pharmaceutics";
-        public const string DefaultContractAreaPath = DefaultEmptyContractAreaPath;
+        public const string EmptyContractAreaPath = "Empty";
+        public const string IoTContractAreaPath = "IoT";
+        public const string PharmaceuticsContractAreaPath = "Pharmaceutics";
+        public const string DefaultContractAreaPath = EmptyContractAreaPath;
 
         public const string ContractSbn = "contract";
         public const string TestSbn = "test";
         public const string TestGasSbn = "test-gas";
         public const string DefaultSbnType = ContractSbn;
+
+        public const string SolidityLanguage = "solidity";
+        public const string JavaScriptLanguage = "javascript";
+        public const string YamlLanguage = "yaml";
+        public const string DefaultLanguage = YamlLanguage;
     }
 }

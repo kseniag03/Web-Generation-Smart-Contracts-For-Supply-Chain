@@ -1,0 +1,111 @@
+﻿@page "/generator"
+@rendermode InteractiveServer
+@using Application.Common
+@using Application.DTOs
+@using System.Text.Json
+@using WebApp.Components.Pages.Generator
+@inject IHttpClientFactory ClientFactory
+@inject IJSRuntime JS
+
+<h1>Generate Smart Contract</h1>
+
+<div class="main-container">
+
+    <div class="left-panel">
+
+        <button class="custom-btn" @onclick="HandleGenerate">Generate</button>
+
+        <EditorTabs Model="@Model"
+                    ShowResults="@ShowResults"
+                    Tabs="@Tabs"
+                    TabContents="@TabContents"
+                    ActiveTab="@ActiveTab"
+                    IsEditing="@IsEditing"
+                    OnEditToggle="@OnEditToggle"
+                    OnTabSelected="@OnTabSelected"
+                    OnCodeChanged="@UpdateTabContent" />
+    </div>
+
+    <div class="right-panel">
+        <RightPanel Model="Model"
+                    YamlContent="@YamlContent"
+                    ShowYamlEditor="ShowYamlEditor"
+                    CanSetup="CanSetup"
+                    OnSetup="HandleSetup"
+                    OnYamlChanged="OnYamlChanged" />
+    </div>
+
+</div>
+<div class="main-container">
+</div>
+
+@code {
+    private ContractParamsDto Model = new();
+
+    private bool CanSetup => !string.IsNullOrEmpty(Model.Area);
+    private bool ShowYamlEditor;
+    private bool ShowResults;
+    private bool IsEditing;
+    private int ActiveTab;
+    private string YamlContent = AppConstants.DefaultYamlContent;
+
+    private string[] Tabs = { "Contract", "Test", "Gas Report" };
+    private string[] TabContents = new string[3] { "", "", "" };
+
+    private async Task HandleSetup()
+    {
+        var client = ClientFactory.CreateClient("with-cookies");
+        var result = await client.PostAsJsonAsync("/api/contracts/setup", Model);
+        var doc = await result.Content.ReadFromJsonAsync<JsonElement>();
+
+        YamlContent = doc.GetProperty("yaml").GetString() ?? "";
+        ShowYamlEditor = true;
+    }
+
+    private void OnYamlChanged(string newYaml) => YamlContent = newYaml;
+
+    private async Task HandleGenerate()
+    {
+        Model.LayoutYaml = YamlContent;
+
+        var client = ClientFactory.CreateClient("with-cookies");
+        var result = await client.PostAsJsonAsync("/api/contracts/generate", Model);
+        var data = await result.Content.ReadFromJsonAsync<JsonElement>();
+
+        TabContents[0] = data.GetProperty("code").GetString() ?? "";
+        TabContents[1] = data.GetProperty("testScript").GetString() ?? "";
+        TabContents[2] = data.GetProperty("gasReport").GetString() ?? "";
+
+        ShowResults = true;
+        IsEditing = false;
+    }
+
+    private void OnTabSelected(int idx)
+    {
+        ActiveTab = idx;
+        IsEditing = false;
+    }
+
+    private async Task OnEditToggle()
+    {
+        if (IsEditing)
+        {
+            var payload = new { Model.Area, Tab = Tabs[ActiveTab], Code = TabContents[ActiveTab] };
+            var client = ClientFactory.CreateClient("with-cookies");
+
+            await client.PostAsJsonAsync("/api/contracts/update-code", payload);
+
+            IsEditing = false;
+        }
+        else
+        {
+            IsEditing = true;
+        }
+    }
+
+    private Task UpdateTabContent((int tab, string code) update)
+    {
+        TabContents[update.tab] = update.code;
+        return Task.CompletedTask;
+    }
+}

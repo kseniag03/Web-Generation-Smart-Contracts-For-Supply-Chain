@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Application.Common;
 using Application.DTOs;
 using Application.Interfaces;
 // using Application.Mappings;
@@ -8,6 +9,8 @@ namespace Application.Services
 {
     public class SmartContractService
     {
+        private readonly ISolutionPathProvider _solutionPathProvider;
+        private readonly IContractModelProvider _contractModelProvider;
         private readonly ISmartContractRepository _contractRepository;
         private readonly ITemplateRepository _templateRepository;
         // private readonly IContractStorage _contractStorage;
@@ -15,12 +18,29 @@ namespace Application.Services
 
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
 
-        public SmartContractService(ISmartContractRepository contractRepository, ITemplateRepository templateRepository)//, IContractStorage contractStorage, IBlockchainService blockchainService)
+        public SmartContractService(
+            ISolutionPathProvider solutionPathProvider,
+            IContractModelProvider contractModelProvider,
+            ISmartContractRepository contractRepository,
+            ITemplateRepository templateRepository//,
+            // IContractStorage contractStorage,
+            // IBlockchainService blockchainService)
+        )
         {
+            _solutionPathProvider = solutionPathProvider;
+            _contractModelProvider = contractModelProvider;
             _contractRepository = contractRepository;
             _templateRepository = templateRepository;
             // _contractStorage = contractStorage;
             // _blockchainService = blockchainService;
+        }
+
+        public string GetInstancePath(ContractParamsDto paramsDto)
+        {
+            var solutionDirectory = _solutionPathProvider.GetSolutionRoot();
+            var model = _contractModelProvider.GetContractModelFromYaml(paramsDto.LayoutYaml);
+            
+            return ContractPathHelper.ComputeInstancePath(paramsDto.Area, model, solutionDirectory);
         }
 
         public async Task<string> LoadYamlTemplate(ContractParamsDto paramsDto)

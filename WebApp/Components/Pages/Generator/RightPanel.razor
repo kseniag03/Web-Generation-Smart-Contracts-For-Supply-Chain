@@ -1,0 +1,51 @@
+﻿@namespace WebApp.Components.Pages.Generator
+@using Application.Common
+@using Application.DTOs
+@using Microsoft.AspNetCore
+
+<h3>Contract Parameters</h3>
+
+<label for="area-select">Area of Application:</label>
+<select id="area-select" @bind="Model.Area">
+    @foreach (var area in Areas)
+    {
+        <option value="@area">@area</option>
+    }
+</select>
+
+<button class="custom-btn" @onclick="OnSetupClicked" disabled="@(!CanSetup)"> Setup </button>
+
+@if (ShowYamlEditor)
+{
+    <label class="yaml-label">YAML</label>
+
+    <div class="code-container">
+        <textarea class="code-editor" @bind="InternalYaml" @bind:event="oninput"></textarea>
+    </div>
+}
+
+@code {
+    [Parameter] public ContractParamsDto Model { get; set; } = new();
+
+    [Parameter] public bool   CanSetup       { get; set; } = true;
+    [Parameter] public bool   ShowYamlEditor { get; set; }
+    [Parameter] public string YamlContent { get; set; } = AppConstants.DefaultYamlContent;
+
+    [Parameter] public EventCallback         OnSetup       { get; set; }
+    [Parameter] public EventCallback<string> OnYamlChanged { get; set; }
+
+    private static readonly string[] Areas = new[]
+    {
+        AppConstants.EmptyContractAreaPath,
+        AppConstants.IoTContractAreaPath,
+        AppConstants.PharmaceuticsContractAreaPath
+    };
+
+    private string InternalYaml
+    {
+        get => YamlContent;
+        set => OnYamlChanged.InvokeAsync(value);
+    }
+
+    private async Task OnSetupClicked() => await OnSetup.InvokeAsync();
+}

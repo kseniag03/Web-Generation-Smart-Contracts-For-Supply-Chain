@@ -1,0 +1,237 @@
+﻿@namespace WebApp.Components.Pages.Generator
+@using System.Text.Json
+@using Application.DTOs
+@using Microsoft.AspNetCore.Components
+@inject AuthenticationStateProvider Auth
+@inject IHttpClientFactory ClientFactory
+@inject IJSRuntime JS
+
+@if (ShowButtons)
+{
+    <div class="button-container">
+
+        <div class="tooltip-container">
+            <button class="custom-btn" @onclick="RunDeploy" disabled="@(!canDeploy)"> Deploy </button>
+
+            @if (!canDeploy)
+            {
+                <span class="tooltip-text">Недостаточно прав</span>
+            }
+        </div>
+
+        <div class="tooltip-container">
+            <button class="custom-btn" @onclick="RunAudit" disabled="@(!canAudit)"> Audit </button>
+
+            @if (!canAudit)
+            {
+                <span class="tooltip-text">Недостаточно прав</span>
+            }
+        </div>
+
+        <div class="tooltip-container">
+            <button class="custom-btn" @onclick="RunTesting" disabled="@(!canTest)"> Testing </button>
+
+            @if (!canTest)
+            {
+                <span class="tooltip-text">Недостаточно прав</span>
+            }
+        </div>
+
+        <button class="custom-btn" @onclick="RunCompile">Compile</button>
+
+    </div>
+
+    @if (testingOutput.Count > 0)
+    {
+        <div class="output-container">
+            <pre><code class="language-shell">@string.Join("\n", testingOutput)</code></pre>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public ContractParamsDto Model { get; set; } = new();
+
+    [Parameter] public bool ShowButtons { get; set; }
+    
+    /*
+    [Parameter] public EventCallback OnDeploy { get; set; }
+    [Parameter] public EventCallback OnAudit { get; set; }
+    [Parameter] public EventCallback OnTest { get; set; }
+    [Parameter] public EventCallback OnGasReport { get; set; }
+    [Parameter] public EventCallback OnCompile { get; set; }*/
+
+    private List<string> testingOutput = new();
+
+    private UserDto? user;
+    private bool canTest, canAudit, canDeploy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var state = await Auth.GetAuthenticationStateAsync();
+            var isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+
+            if (isAuthenticated)
+            {
+                user = new UserDto
+                {
+                    Login = state.User.Identity!.Name!,
+                    Email = state.User.FindFirst("urn:email:login")?.Value,
+                    Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user",
+                    GitHubId = state.User.FindFirst("urn:github:login")?.Value,
+                    WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value
+                };
+
+                canTest = IsInRole(user, "Tester", "Auditor", "Deployer", "Admin");
+                canAudit = IsInRole(user, "Auditor", "Deployer", "Admin");
+                canDeploy = IsInRole(user, "Deployer", "Admin");
+            }
+        }
+        catch (Exception ex)
+        {
+            var message = ex.Message;
+        }
+    }
+
+    private bool IsInRole(UserDto user, params string[] roles) =>
+        roles.Any(r => r.Equals(user.Role, StringComparison.OrdinalIgnoreCase));
+
+    private async Task RunCompile()
+    {
+        testingOutput.Clear();
+        testingOutput.Add("Compiling contract...");
+
+        try
+        {
+            var client = ClientFactory.CreateClient("with-cookies");
+            var result = await client.PostAsJsonAsync("/api/contracts/test", Model);
+
+            if (result.IsSuccessStatusCode)
+            {
+                var output = await result.Content.ReadFromJsonAsync<JsonElement>();
+                var text = output.GetProperty("output").ToString();
+
+                testingOutput.AddRange(text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+            }
+            else
+            {
+                var error = await result.Content.ReadAsStringAsync();
+                testingOutput.Add($"Ошибка: {result.StatusCode} — {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"Исключение: {ex.Message}");
+        }
+    }
+
+    private async Task RunTesting()
+    {
+        testingOutput.Clear();
+        testingOutput.Add("Запуск тестирования...");
+
+        try
+        {
+            var client = ClientFactory.CreateClient("with-cookies");
+            var result = await client.PostAsJsonAsync("/api/contracts/test", Model);
+
+            if (result.IsSuccessStatusCode)
+            {
+                var output = await result.Content.ReadFromJsonAsync<JsonElement>();
+                var text = output.GetProperty("output").ToString();
+
+                testingOutput.AddRange(text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+            }
+            else
+            {
+                var error = await result.Content.ReadAsStringAsync();
+                testingOutput.Add($"Ошибка: {result.StatusCode} — {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"Исключение: {ex.Message}");
+        }
+    }
+
+    private async Task RunAudit()
+    {
+        testingOutput.Clear();
+        testingOutput.Add("Запуск аудита...");
+
+        try
+        {
+            var client = ClientFactory.CreateClient("with-cookies");
+            var result = await client.PostAsJsonAsync("/api/contracts/audit", Model);
+
+            if (result.IsSuccessStatusCode)
+            {
+                var message = await result.Content.ReadAsStringAsync();
+                testingOutput.Add(message);
+            }
+            else
+            {
+                var error = await result.Content.ReadAsStringAsync();
+                testingOutput.Add($"Ошибка аудита: {result.StatusCode} — {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"Исключение аудита: {ex.Message}");
+        }
+    }
+
+    private async Task RunDeploy()
+    {
+        if (user is null || string.IsNullOrEmpty(user.WalletAddress))
+        {
+            testingOutput.Add($"Не найден пользователь или его Metamask кошелек, деплой невозможен");
+
+            return;
+        }
+
+        testingOutput.Clear();
+        testingOutput.Add("Подключение к MetaMask и деплой...");
+
+        var client = ClientFactory.CreateClient("with-cookies");
+        var result = await client.GetFromJsonAsync<AbiBytecodeDto>("/api/contracts/abi-bytecode/{contractName}");
+
+        if (result is null || result.Abi is null || string.IsNullOrEmpty(result.Bytecode))
+        {
+            testingOutput.Add($"Не найдены Abi и Bytecode, деплой невозможен");
+
+            return;
+        }
+
+        var abi = result.Abi;
+        var bytecode = result.Bytecode;
+        var constructorArgs = new object[]
+        {
+            user.WalletAddress
+        };
+
+        try
+        {
+            var deployedAddress = await JS.InvokeAsync<string>(
+                "deployFunctions.deployWithMetaMask",
+                abi, bytecode, constructorArgs
+            );
+
+            if (deployedAddress.StartsWith("ERROR"))
+            {
+                testingOutput.Add("Ошибка: " + deployedAddress);
+            }
+            else
+            {
+                testingOutput.Add("Контракт успешно задеплоен по адресу:");
+                testingOutput.Add(deployedAddress);
+            }
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"Исключение при деплое: {ex.Message}");
+        }
+    }
+}

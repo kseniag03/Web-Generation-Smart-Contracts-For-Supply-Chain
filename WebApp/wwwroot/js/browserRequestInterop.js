@@ -1,6 +1,6 @@
-// wwwroot/js/apiLoginInterop.js
+// wwwroot/js/browserRequestInterop.js
 
-window.apiLogin = async function (url, data) {
+window.sendRequestViaBrowser = async function (url, data) {
     const resp = await fetch(url, {
         method: 'POST',
         credentials: 'include',

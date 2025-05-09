@@ -6,7 +6,6 @@ using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using Npgsql;
-using Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,31 +79,12 @@ using (var scope = app.Services.CreateScope())
     }
     catch (PostgresException ex) when (ex.SqlState == "42P07")
     {
-        // Table already exists, continue silently
         var message = ex.Message;
     }
     catch (Exception ex)
     {
-        // another problem
         var message = ex.Message;
     }
 }
-
-// !!!!!!!!!! debug scriban
-
-try
-{
-    var repo = new ScribanRepository(builder.Configuration);
-
-    repo.Init();
-    repo.Init("IoT");
-    repo.Init("Pharmaceutics");
-}
-catch (Exception ex)
-{
-    Console.WriteLine(ex.Message);
-}
-
-// !!!!!!!!!! debug scriban
 
 app.Run();

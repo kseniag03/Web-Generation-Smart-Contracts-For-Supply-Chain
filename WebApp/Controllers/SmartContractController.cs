@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Application.DTOs;
 using Application.Services;
 using Utilities.Interfaces;
-using Infrastructure.Repositories.Helpers;
 
 namespace WebApp.Controllers
 {
@@ -33,16 +32,21 @@ namespace WebApp.Controllers
         [HttpPost("setup")]
         public async Task<IActionResult> SetupTemplate([FromBody] ContractParamsDto paramsDto)
         {
-            return await ContractAction(
-                paramsDto,
-                async instancePath =>
-                {
-                    var yaml = await _contractService.LoadYamlTemplate(paramsDto);
+            if (paramsDto == null || string.IsNullOrEmpty(paramsDto.Area))
+            {
+                return BadRequest("Missing contract parameter");
+            }
 
-                    return new { yaml };
-                },
-                result => Ok(result)
-            );
+            try
+            {
+                var yaml = await _contractService.LoadYamlTemplate(paramsDto);
+
+                return Ok(new { yaml });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
         }
 
         [HttpPost("generate")]
@@ -59,7 +63,7 @@ namespace WebApp.Controllers
                         return default;
                     }
 
-                    await _hh.SetupInstanceEnvironment(instancePath);
+                    // await _hh.SetupInstanceEnvironment(instancePath);
 
                     return new
                     {
@@ -217,7 +221,7 @@ namespace WebApp.Controllers
                 return BadRequest("Missing contract parameter");
             }
 
-            var instancePath = ContractPathHelper.ComputeInstancePath(paramsDto);
+            var instancePath = _contractService.GetInstancePath(paramsDto);
 
             if (instancePath is null)
             {

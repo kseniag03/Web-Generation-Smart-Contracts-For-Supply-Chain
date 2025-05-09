@@ -1,10 +1,9 @@
 // wwwroot/js/web3Interop.js
 
-window.myWeb3Functions = {
+window.web3Functions = {
 
     connectMetaMask: async function () {
         if (typeof window.ethereum === "undefined") {
-            // бросаем строку, а не объект - сообщение видно в C#
             throw "MetaMask is not installed or disabled";
         }
 
@@ -13,9 +12,8 @@ window.myWeb3Functions = {
                 method: "eth_requestAccounts"
             });
 
-            return accounts;          // string[]
+            return accounts;
         } catch (err) {
-            // err может быть объектом { code, message }
             throw err.message ?? err;
         }
     },

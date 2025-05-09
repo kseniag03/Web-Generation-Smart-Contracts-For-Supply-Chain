@@ -36,7 +36,7 @@ namespace Infrastructure.DI
                 }
             }
 
-            var adminLogin = Environment.GetEnvironmentVariable("ADMIN_LOGIN") ?? AppConstants.DefaultAdminLogin;
+            var adminLogin = Environment.GetEnvironmentVariable("ADMIN_LOGIN") ?? AppConstants.AdminLogin;
             var adminPassHash = Environment.GetEnvironmentVariable("ADMIN_PASSHASH");
 
             if (!string.IsNullOrEmpty(adminPassHash) && !await db.Users.AnyAsync(u => u.Login == adminLogin))
@@ -44,9 +44,9 @@ namespace Infrastructure.DI
                 var admin = new User
                 {
                     Login = adminLogin,
-                    Firstname = AppConstants.DefaultAdminFirstname,
-                    Lastname = AppConstants.DefaultAdminLastname,
-                    Email = AppConstants.DefaultAdminEmail,
+                    Firstname = AppConstants.AdminFirstname,
+                    Lastname = AppConstants.AdminLastname,
+                    Email = AppConstants.AdminEmail,
                     GitHubId = string.Empty
                 };
 
@@ -76,6 +76,9 @@ namespace Infrastructure.DI
                 options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
             services.AddExtraAuthOptions(configuration);
+
+            services.AddSingleton<ISolutionPathProvider, SolutionPathProvider>();
+            services.AddSingleton<IContractModelProvider, ContractModelProvider>();
 
             services.AddScoped<IAuthRepository, AuthRepository>();
             services.AddScoped<ISmartContractRepository, SmartContractRepository>();

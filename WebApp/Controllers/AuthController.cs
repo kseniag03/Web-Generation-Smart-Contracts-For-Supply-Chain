@@ -210,6 +210,11 @@ namespace WebApp.Controllers
                 new Claim(ClaimTypes.Role, user.Role.ToLowerInvariant())
             };
 
+            if (!string.IsNullOrEmpty(user.Email))
+            {
+                claims.Add(new Claim("urn:email:login", user.Email));
+            }
+
             if (!string.IsNullOrEmpty(user.GitHubId))
             {
                 claims.Add(new Claim("urn:github:login", user.GitHubId));

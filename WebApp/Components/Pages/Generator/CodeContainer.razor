@@ -1,0 +1,28 @@
+﻿@using Application.Common
+@inject IJSRuntime JS
+
+<pre><code class="language-@Language">@((MarkupString)Content)</code></pre>
+
+@code {
+    [Parameter] public string Content { get; set; } = string.Empty;
+    [Parameter] public string Language { get; set; } = AppConstants.DefaultLanguage;
+
+    private bool _highlightPending;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Content))
+        {
+            _highlightPending = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_highlightPending)
+        {
+            _highlightPending = false;
+            await JS.InvokeVoidAsync("highlightAll");
+        }
+    }
+}

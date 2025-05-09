@@ -9,10 +9,13 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["WebApp.styles.css"]" />
 
-    <!-- Prism.js to highlight Solidity -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-solidity.min.js"></script>
+    <!-- Prism.js to highlight Solidity, JS, YAML -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-solidity.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
 
     <!-- for metamask deploy -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
@@ -24,11 +27,12 @@
 
 <body>
     <Routes />
-    <script src="_framework/blazor.web.js"></script>
-    <script src="js/apiLoginInterop.js"></script>
+    <script src="js/browserRequestInterop.js"></script>
     <script src="js/deployInterop.js"></script>
     <script src="js/prismInterop.js"></script>
     <script src="js/web3Interop.js"></script>
+
+    <script src="_framework/blazor.web.js"></script>]
 </body>
 
 </html>

@@ -13,43 +13,46 @@ namespace Infrastructure.Repositories.Helpers
                 return _cachedPath;
             }
 
+            DirectoryInfo? dirInfo = null;
+
             var fromConfig = configuration["SolutionRoot"];
 
             if (!string.IsNullOrEmpty(fromConfig))
             {
-                var dirInfo2 = new DirectoryInfo(fromConfig);
+                var configDir = new DirectoryInfo(fromConfig);
 
-                _cachedPath = GetSolutionPath(dirInfo2);
+                if (configDir.Exists && configDir.GetFiles("*.sln", SearchOption.AllDirectories).Any())
+                {
+                    dirInfo = configDir;
+                }
             }
 
-            var dirInfo1 = new DirectoryInfo(Directory.GetCurrentDirectory());
+            if (dirInfo == null)
+            {
+                dirInfo = new DirectoryInfo(Directory.GetCurrentDirectory());
+            }
 
-            _cachedPath = 
-                (
-                    _cachedPath is null 
-                    ? GetSolutionPath(dirInfo1) 
-                    : _cachedPath
-                )
+            var solutionPath = GetSolutionPath(dirInfo)
                 ?? throw new InvalidOperationException("Solution directory not found.");
+
+            _cachedPath = solutionPath;
 
             return _cachedPath;
         }
 
         private static string? GetSolutionPath(DirectoryInfo dirInfo)
         {
-            if (dirInfo is null || !dirInfo.Exists)
+            while (dirInfo != null && dirInfo.Parent != null)
             {
-                return null;
-            }
+                if (dirInfo.GetFiles("*.sln", SearchOption.AllDirectories).Any())
+                {
+                    return dirInfo.FullName;
+                }
 
-            while (dirInfo is not null && !dirInfo.GetFiles("*.sln", SearchOption.AllDirectories).Any() && dirInfo?.Parent is not null)
-            {
                 dirInfo = dirInfo.Parent;
             }
 
-            _cachedPath = dirInfo?.FullName ?? throw new InvalidOperationException("Solution directory not found.");
-
-            return _cachedPath;
+            return null;
         }
     }
 }

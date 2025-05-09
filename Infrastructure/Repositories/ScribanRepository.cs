@@ -27,39 +27,6 @@ namespace Infrastructure.Repositories
             _templatesPath = Path.Combine(_solutionDirectory, tempatesPath);
         }
 
-        /// <summary>
-        /// for debug
-        /// </summary>
-        /// <param name="areaPath"></param>
-        /// <param name="sbnType"></param>
-        public void Init(
-            string areaPath = AppConstants.DefaultContractAreaPath,
-            string sbnType = AppConstants.DefaultSbnType
-        )
-        {
-            var yamlPath = Path.Combine(_templatesPath, $"contract-spec-{areaPath}.yaml");
-            var sbnPath = Path.Combine(_templatesPath, $"{sbnType}.sbn");
-
-            var spec = SpecLoader.LoadModelFromYamlFile(yamlPath);
-            var template = Template.Parse(File.ReadAllText(sbnPath));
-            var ctx = new TemplateContext();
-            var script = new ScriptObject();
-
-            script.Import(spec);
-            ctx.PushGlobal(script);
-            ctx.BuiltinObject.Import("json_stringify", new Func<object, string>(obj =>
-                JsonSerializer.Serialize(obj, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                })
-            ));
-
-            var result = template.Render(ctx);
-            var outputPath = Path.Combine(_templatesPath, $"out/{areaPath}-{spec.ContractName}.sol");
-
-            // File.WriteAllText(outputPath, result);
-        }
-
         public async Task<string> LoadAreaModelTemplate(string area)
         {
             var path = Path.Combine(_templatesPath, $"contract-spec-{area}.yaml");
