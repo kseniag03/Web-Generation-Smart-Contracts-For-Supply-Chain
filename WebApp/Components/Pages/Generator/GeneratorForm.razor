@@ -4,7 +4,6 @@
 @using Application.DTOs
 @using System.Text.Json
 @using WebApp.Components.Pages.Generator
-@inject IHttpClientFactory ClientFactory
 @inject IJSRuntime JS
 
 <h1>Generate Smart Contract</h1>
@@ -54,30 +53,60 @@
 
     private async Task HandleSetup()
     {
-        var client = ClientFactory.CreateClient("with-cookies");
-        var result = await client.PostAsJsonAsync("/api/contracts/setup", Model);
-        var doc = await result.Content.ReadFromJsonAsync<JsonElement>();
+        try
+        {
+            var doc = await JS.InvokeAsync<JsonElement>(
+                "sendRequestViaBrowser",
+                "/api/contracts/setup",
+                Model);
 
-        YamlContent = doc.GetProperty("yaml").GetString() ?? "";
-        ShowYamlEditor = true;
+            YamlContent = doc.GetProperty("yaml").GetString() ?? AppConstants.DefaultYamlContent;
+            ShowYamlEditor = true;
+        }
+        catch (JSException jsEx)
+        {
+            Console.Error.WriteLine($"HandleSetup JS error: {jsEx}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"HandleSetup error: {ex}");
+        }
     }
 
-    private void OnYamlChanged(string newYaml) => YamlContent = newYaml;
+    private void OnYamlChanged(string newYaml)
+    {
+        YamlContent =
+            string.IsNullOrEmpty(newYaml) || string.IsNullOrWhiteSpace(newYaml)
+            ? AppConstants.DefaultYamlContent
+            : newYaml;
+    }
 
     private async Task HandleGenerate()
     {
-        Model.LayoutYaml = YamlContent;
+        try
+        {
+            Model.LayoutYaml = YamlContent;
 
-        var client = ClientFactory.CreateClient("with-cookies");
-        var result = await client.PostAsJsonAsync("/api/contracts/generate", Model);
-        var data = await result.Content.ReadFromJsonAsync<JsonElement>();
+            var data = await JS.InvokeAsync<JsonElement>(
+                "sendRequestViaBrowser",
+                "/api/contracts/generate",
+                Model);
 
-        TabContents[0] = data.GetProperty("code").GetString() ?? "";
-        TabContents[1] = data.GetProperty("testScript").GetString() ?? "";
-        TabContents[2] = data.GetProperty("gasReport").GetString() ?? "";
+            TabContents[0] = data.GetProperty("code").GetString() ?? "";
+            TabContents[1] = data.GetProperty("testScript").GetString() ?? "";
+            TabContents[2] = data.GetProperty("gasReport").GetString() ?? "";
 
-        ShowResults = true;
-        IsEditing = false;
+            ShowResults = true;
+            IsEditing = false;
+        }
+        catch (JSException jsEx)
+        {
+            Console.Error.WriteLine($"HandleGenerate JS error: {jsEx}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"HandleGenerate error: {ex}");
+        }
     }
 
     private void OnTabSelected(int idx)
@@ -91,9 +120,10 @@
         if (IsEditing)
         {
             var payload = new { Model.Area, Tab = Tabs[ActiveTab], Code = TabContents[ActiveTab] };
-            var client = ClientFactory.CreateClient("with-cookies");
-
-            await client.PostAsJsonAsync("/api/contracts/update-code", payload);
+            var result = await JS.InvokeAsync<JsonElement>(
+                "sendRequestViaBrowser",
+                "/api/contracts/update-code",
+                payload); // need to add endpoint
 
             IsEditing = false;
         }

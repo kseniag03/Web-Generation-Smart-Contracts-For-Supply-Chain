@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace Infrastructure.Repositories.Helpers
 {
@@ -6,53 +7,42 @@ namespace Infrastructure.Repositories.Helpers
     {
         private static string? _cachedPath;
 
-        public static string GetSolutionRoot(IConfiguration configuration)
+        public static string GetSolutionRoot(IConfiguration configuration, IHostEnvironment hostEnv)
         {
             if (!string.IsNullOrEmpty(_cachedPath))
             {
                 return _cachedPath;
             }
 
-            DirectoryInfo? dirInfo = null;
+            var cfg = configuration["SolutionRoot"];
 
-            var fromConfig = configuration["SolutionRoot"];
-
-            if (!string.IsNullOrEmpty(fromConfig))
+            if (!string.IsNullOrWhiteSpace(cfg))
             {
-                var configDir = new DirectoryInfo(fromConfig);
+                var full = Path.GetFullPath(cfg);
 
-                if (configDir.Exists && configDir.GetFiles("*.sln", SearchOption.AllDirectories).Any())
+                if (Directory.Exists(full))
                 {
-                    dirInfo = configDir;
+                    _cachedPath = full;
+
+                    return _cachedPath;
                 }
             }
 
-            if (dirInfo == null)
+            var dir = new DirectoryInfo(hostEnv.ContentRootPath);
+
+            while (dir != null)
             {
-                dirInfo = new DirectoryInfo(Directory.GetCurrentDirectory());
-            }
-
-            var solutionPath = GetSolutionPath(dirInfo)
-                ?? throw new InvalidOperationException("Solution directory not found.");
-
-            _cachedPath = solutionPath;
-
-            return _cachedPath;
-        }
-
-        private static string? GetSolutionPath(DirectoryInfo dirInfo)
-        {
-            while (dirInfo != null && dirInfo.Parent != null)
-            {
-                if (dirInfo.GetFiles("*.sln", SearchOption.AllDirectories).Any())
+                if (dir.EnumerateFiles("*.sln", SearchOption.TopDirectoryOnly).Any())
                 {
-                    return dirInfo.FullName;
+                    _cachedPath = dir.FullName;
+
+                    return _cachedPath;
                 }
 
-                dirInfo = dirInfo.Parent;
+                dir = dir.Parent;
             }
 
-            return null;
+            throw new InvalidOperationException("Solution directory not found");
         }
     }
 }

@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: {{ spdx }}
+pragma solidity {{ pragma }};
+
+import "forge-std/Test.sol";
+import "../contracts/{{ contract_name }}.sol";
+
+contract {{ contract_name }}Test is Test {
+    {{ contract_name }} contractInstance;
+
+    function setUp() public {
+{{ if (inheritance | array.contains "Ownable") }}
+        contractInstance = new {{ contract_name }}(address(0x1));
+{{ else }}
+        contractInstance = new {{ contract_name }}();
+{{- end -}}
+    }
+
+{{- if functions && functions.size > 0 }}
+{{- for fn in functions -}}
+{{ if fn  }}
+    function test_{{ fn.name }}() public view {
+        contractInstance.{{ fn.name }}();
+    }
+{{ end }}
+{{- end -}}
+{{- end -}}
+}

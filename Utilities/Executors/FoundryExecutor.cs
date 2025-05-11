@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Utilities.Interfaces;
+﻿using Utilities.Interfaces;
 
 namespace Utilities.Executors
 {
@@ -8,7 +7,7 @@ namespace Utilities.Executors
         private readonly string _baseDir = AppContext.BaseDirectory;
         private readonly ICommandExecutor _cmd;
 
-        public FoundryExecutor(IConfiguration config, ICommandExecutor cmd)
+        public FoundryExecutor(ICommandExecutor cmd)
         {
             _cmd = cmd;
         }

@@ -2,7 +2,7 @@
 using Application.Common;
 using Application.DTOs;
 using Application.Interfaces;
-// using Application.Mappings;
+using Application.Specifications.Yaml;
 using Core.Enums;
 
 namespace Application.Services
@@ -37,8 +37,29 @@ namespace Application.Services
 
         public string GetInstancePath(ContractParamsDto paramsDto)
         {
-            var solutionDirectory = _solutionPathProvider.GetSolutionRoot();
-            var model = _contractModelProvider.GetContractModelFromYaml(paramsDto.LayoutYaml);
+            if (paramsDto.LayoutYaml is null || string.IsNullOrEmpty(paramsDto.LayoutYaml))
+            {
+                Console.WriteLine("Trying to load model from null or empty yaml, replacing yaml to default {}");
+
+                paramsDto.LayoutYaml = AppConstants.DefaultYamlContent;
+            }
+
+            string? solutionDirectory;
+            ContractModel? model;
+
+            try
+            {
+                solutionDirectory = _solutionPathProvider.GetSolutionRoot();
+                model = _contractModelProvider.GetContractModelFromYaml(paramsDto.LayoutYaml);
+            }
+            catch (Exception ex) when (ex is YamlDotNet.Core.YamlException)
+            {
+                Console.WriteLine("Trying to load incorrect yaml model, replacing yaml to default {}");
+
+                paramsDto.LayoutYaml = AppConstants.DefaultYamlContent;
+                solutionDirectory = _solutionPathProvider.GetSolutionRoot();
+                model = _contractModelProvider.GetContractModelFromYaml(paramsDto.LayoutYaml);
+            }
             
             return ContractPathHelper.ComputeInstancePath(paramsDto.Area, model, solutionDirectory);
         }
@@ -107,7 +128,7 @@ namespace Application.Services
             // var artefacts = _contractStorage.GetContractArtefactsFromDb(instancePath);
             // var contractName = artefacts.Name;
 
-            // return _contractRepository.GetContractAbiBytecode(contractName, instancePath)?.ToDto();
+            // return _contractRepository.GetContractAbiBytecode(contractName, instancePath);
 
             throw new NotImplementedException("WANTED");
         }

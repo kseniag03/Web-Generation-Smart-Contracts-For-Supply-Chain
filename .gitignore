@@ -5,6 +5,14 @@
 
 # env data
 .env
+.env.prod
+.env.debug
+
+# certs
+https/
+https-backup/
+*.pfx
+*.pem
 
 # runtime data
 Instances/
@@ -13,6 +21,7 @@ Instances/
 Tests/chrome-win64/
 Tests/chromedriver-win64/
 
+# local launch settings
 /WebApp/Properties/launchSettings.json
 
 # User-specific files

@@ -1,7 +1,6 @@
 ﻿@page "/login"
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider Auth
-@inject IHttpClientFactory ClientFactory
 @inject IJSRuntime JS
 @inject NavigationManager NavManager
 
@@ -51,7 +50,7 @@ else
 {
     <div class="user-info">
         <h4>Welcome, @user.Login!</h4>
-        <p>Role: <strong>@user.Role</strong></p>
+        <p>Role: <strong>@(user.Role?.ToLower() ?? "user")</strong></p>
 
         <button class="auth-btn" @onclick="() => showPasswordForm = !showPasswordForm">Change Password</button>
 
@@ -71,7 +70,7 @@ else
         }
 
         @{
-            var role = user.Role ?? "user";
+            var role = user.Role?.ToLower() ?? "user";
             var showGitHub = AtLeast(role, "tester") && string.IsNullOrEmpty(user.GitHubId);
             var showMetaMask = AtLeast(role, "auditor") && (AllowManyWallets || string.IsNullOrEmpty(user.WalletAddress));
         }
@@ -123,7 +122,7 @@ else
             if (isAuthenticated)
             {
                 user.Login = state.User.Identity!.Name!;
-                user.Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
+                user.Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "user";
                 user.GitHubId = state.User.FindFirst("urn:github:login")?.Value;
                 user.WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value;
             }
@@ -149,7 +148,6 @@ else
 
         try
         {
-            // вызвать fetch(url, body) и получить UserModel
             user = await JS.InvokeAsync<UserModel>(
                 "sendRequestViaBrowser",
                 "/api/auth/login",
@@ -178,7 +176,6 @@ else
 
         try
         {
-            // вызвать fetch(url, body) и получить UserModel
             user = await JS.InvokeAsync<UserModel>(
                 "sendRequestViaBrowser",
                 "/api/auth/register",
@@ -225,7 +222,6 @@ else
             errorMessage = "Internal Error";
             Console.Error.WriteLine(ex);
         }
-
     }
 
     private void ConnectGitHub()
@@ -243,7 +239,6 @@ else
 
             if (accounts.Length > 0)
             {
-                // вернёт строку "MetaMask linked" или ошибку
                 await JS.InvokeVoidAsync(
                     "sendRequestViaBrowser",
                     "/api/auth/link-metamask",

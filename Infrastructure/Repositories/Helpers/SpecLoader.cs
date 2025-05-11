@@ -17,7 +17,7 @@ namespace Infrastructure.Repositories.Helpers
         {
             var yaml = await File.ReadAllTextAsync(path);
 
-            return LoadModelFromYaml(yaml);
+            return DeserializeContractModelFromYaml(yaml);
         }
 
         public static ContractModel LoadModelFromYamlFile(string path)
@@ -31,7 +31,7 @@ namespace Infrastructure.Repositories.Helpers
         {
             var yaml = await File.ReadAllTextAsync(path);
 
-            return LoadModelFromYaml(yaml);
+            return DeserializeContractModelFromYaml(yaml);
         }
 
         public static ContractModel LoadModelFromYaml(string yaml)

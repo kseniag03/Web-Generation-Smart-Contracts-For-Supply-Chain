@@ -1,15 +1,25 @@
-using WebApp.Components;
-using Utilities.DI;
+using Infrastructure.Data;
 using Infrastructure.DI;
 using Microsoft.AspNetCore.DataProtection;
-using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Net;
 using Npgsql;
+using System.Net;
+using Utilities.DI;
+using WebApp.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+if (builder.Environment.IsProduction())
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ConfigureHttpsDefaults(httpsOptions =>
+        {
+            httpsOptions.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+        });
+    });
+}
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents()

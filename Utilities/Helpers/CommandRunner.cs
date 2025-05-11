@@ -33,6 +33,15 @@ namespace Utilities.Helpers
             var output = await stdOutTask;
             var error = await stdErrTask;
 
+            Console.WriteLine("=== COMMAND EXECUTION ===");
+            Console.WriteLine($"Command: {command} {args}");
+            Console.WriteLine($"WorkingDir: {workingDirectory}");
+            Console.WriteLine("Output:");
+            Console.WriteLine(output);
+            Console.WriteLine("Error:");
+            Console.WriteLine(error);
+            Console.WriteLine("=== COMMAND EXECUTION FINISH ===");
+
             return string.IsNullOrWhiteSpace(error) ? output : output + "\n--- STDERR ---\n" + error;
         }
     }

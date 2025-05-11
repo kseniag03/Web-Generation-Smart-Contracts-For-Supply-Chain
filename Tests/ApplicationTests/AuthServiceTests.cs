@@ -19,28 +19,32 @@ namespace Tests.ApplicationTests
         [Fact]
         public async Task LoginUser_WithNonExistentUser_ShouldReturnFailure()
         {
+            const string message = "The user has not been found or the auth data is missing";
+
             _authRepositoryMock.Setup(repo => repo.LoginUser("nonexistent", "password123"))
-                .ReturnsAsync(UserResult.Fail("Пользователь не найден или данные авторизации отсутствуют."));
+                .ReturnsAsync(UserResult.Fail(message));
 
             var result = await _authService.LoginUser("nonexistent", "password123");
 
             Assert.False(result.Succeeded);
             Assert.Null(result.Payload);
-            Assert.Equal("Пользователь не найден или данные авторизации отсутствуют.", result.Error);
+            Assert.Equal(message, result.Error);
         }
 
         [Fact]
         public async Task LoginUser_WithIncorrectPassword_ShouldReturnFailure()
         {
+            const string message = "Wrong password";
+
             _authRepositoryMock
                 .Setup(repo => repo.LoginUser("existingUser", "wrongpassword"))
-                .ReturnsAsync(UserResult.Fail("Неверный пароль."));
+                .ReturnsAsync(UserResult.Fail(message));
 
             var result = await _authService.LoginUser("existingUser", "wrongpassword");
 
             Assert.False(result.Succeeded);
             Assert.Null(result.Payload);
-            Assert.Equal("Неверный пароль.", result.Error);
+            Assert.Equal(message, result.Error);
         }
     }
 }

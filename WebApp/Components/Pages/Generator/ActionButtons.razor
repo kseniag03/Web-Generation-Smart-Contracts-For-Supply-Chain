@@ -3,7 +3,6 @@
 @using Application.DTOs
 @using Microsoft.AspNetCore.Components
 @inject AuthenticationStateProvider Auth
-@inject IHttpClientFactory ClientFactory
 @inject IJSRuntime JS
 
 @if (ShowButtons)
@@ -15,7 +14,7 @@
 
             @if (!canDeploy)
             {
-                <span class="tooltip-text">Недостаточно прав</span>
+                <span class="tooltip-text">You do not have access to this functionality</span>
             }
         </div>
 
@@ -24,7 +23,16 @@
 
             @if (!canAudit)
             {
-                <span class="tooltip-text">Недостаточно прав</span>
+                <span class="tooltip-text">You do not have access to this functionality</span>
+            }
+        </div>
+
+        <div class="tooltip-container">
+            <button class="custom-btn" @onclick="RunGasReport" disabled="@(!canTest)"> Gas </button>
+
+            @if (!canTest)
+            {
+                <span class="tooltip-text">You do not have access to this functionality</span>
             }
         </div>
 
@@ -33,7 +41,7 @@
 
             @if (!canTest)
             {
-                <span class="tooltip-text">Недостаточно прав</span>
+                <span class="tooltip-text">You do not have access to this functionality</span>
             }
         </div>
 
@@ -105,81 +113,116 @@
 
         try
         {
-            var client = ClientFactory.CreateClient("with-cookies");
-            var result = await client.PostAsJsonAsync("/api/contracts/test", Model);
+            var doc = await JS.InvokeAsync<JsonElement>(
+                "sendRequestViaBrowser",
+                "/api/contracts/compile",
+                Model);
 
-            if (result.IsSuccessStatusCode)
-            {
-                var output = await result.Content.ReadFromJsonAsync<JsonElement>();
-                var text = output.GetProperty("output").ToString();
+            var text = doc.GetProperty("output").GetString();
 
-                testingOutput.AddRange(text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
-            }
-            else
-            {
-                var error = await result.Content.ReadAsStringAsync();
-                testingOutput.Add($"Ошибка: {result.StatusCode} — {error}");
-            }
+            testingOutput.AddRange(
+                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                ?? new[] { "[No output]" });
+        }
+        catch (JSException jsEx)
+        {
+            testingOutput.Add($"RunCompile JS error: {jsEx}");
+            Console.Error.WriteLine($"RunCompile JS error: {jsEx}");
         }
         catch (Exception ex)
         {
-            testingOutput.Add($"Исключение: {ex.Message}");
+            testingOutput.Add($"RunCompile error: {ex}");
+            Console.Error.WriteLine($"RunCompile error: {ex}");
         }
     }
 
     private async Task RunTesting()
     {
         testingOutput.Clear();
-        testingOutput.Add("Запуск тестирования...");
+        testingOutput.Add("Launching Hardhat testing...");
 
         try
         {
-            var client = ClientFactory.CreateClient("with-cookies");
-            var result = await client.PostAsJsonAsync("/api/contracts/test", Model);
+            var doc = await JS.InvokeAsync<JsonElement>(
+                "sendRequestViaBrowser",
+                "/api/contracts/test",
+                Model);
 
-            if (result.IsSuccessStatusCode)
-            {
-                var output = await result.Content.ReadFromJsonAsync<JsonElement>();
-                var text = output.GetProperty("output").ToString();
+            var text = doc.GetProperty("output").GetString();
 
-                testingOutput.AddRange(text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
-            }
-            else
-            {
-                var error = await result.Content.ReadAsStringAsync();
-                testingOutput.Add($"Ошибка: {result.StatusCode} — {error}");
-            }
+            testingOutput.AddRange(
+                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                ?? new[] { "[No output]" });
+        }
+        catch (JSException jsEx)
+        {
+            testingOutput.Add($"RunTesting JS error: {jsEx}");
+            Console.Error.WriteLine($"RunTesting JS error: {jsEx}");
         }
         catch (Exception ex)
         {
-            testingOutput.Add($"Исключение: {ex.Message}");
+            testingOutput.Add($"RunTesting error: {ex}");
+            Console.Error.WriteLine($"RunTesting error: {ex}");
+        }
+    }
+
+    private async Task RunGasReport()
+    {
+        testingOutput.Clear();
+        testingOutput.Add("Launching Foundry testing...");
+
+        try
+        {
+            var doc = await JS.InvokeAsync<JsonElement>(
+                "sendRequestViaBrowser",
+                "/api/contracts/gas-report",
+                Model);
+
+            var text = doc.GetProperty("output").GetString();
+
+            testingOutput.AddRange(
+                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                ?? new[] { "[No output]" });
+        }
+        catch (JSException jsEx)
+        {
+            testingOutput.Add($"RunGasReport JS error: {jsEx}");
+            Console.Error.WriteLine($"RunGasReport JS error: {jsEx}");
+        }
+        catch (Exception ex)
+        {
+            testingOutput.Add($"RunGasReport error: {ex}");
+            Console.Error.WriteLine($"RunGasReport error: {ex}");
         }
     }
 
     private async Task RunAudit()
     {
         testingOutput.Clear();
-        testingOutput.Add("Запуск аудита...");
+        testingOutput.Add("Launching Slither audit...");
 
         try
         {
-            var client = ClientFactory.CreateClient("with-cookies");
-            var result = await client.PostAsJsonAsync("/api/contracts/audit", Model);
+            var doc = await JS.InvokeAsync<JsonElement>(
+                "sendRequestViaBrowser",
+                "/api/contracts/audit",
+                Model);
 
-            if (result.IsSuccessStatusCode)
-            {
-                var message = await result.Content.ReadAsStringAsync();
-                testingOutput.Add(message);
-            }
-            else
-            {
-                var error = await result.Content.ReadAsStringAsync();
-                testingOutput.Add($"Ошибка аудита: {result.StatusCode} — {error}");
-            }
+            var text = doc.GetProperty("output").GetString();
+
+            testingOutput.AddRange(
+                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                ?? new[] { "[No output]" });
+        }
+        catch (JSException jsEx)
+        {
+            testingOutput.Add($"RunAudit JS error: {jsEx}");
+            Console.Error.WriteLine($"RunAudit JS error: {jsEx}");
         }
         catch (Exception ex)
         {
-            testingOutput.Add($"Исключение аудита: {ex.Message}");
+            testingOutput.Add($"RunAudit error: {ex}");
+            Console.Error.WriteLine($"RunAudit error: {ex}");
         }
     }
 
@@ -187,51 +230,66 @@
     {
         if (user is null || string.IsNullOrEmpty(user.WalletAddress))
         {
-            testingOutput.Add($"Не найден пользователь или его Metamask кошелек, деплой невозможен");
+            testingOutput.Add($"The user or his Metamask wallet was not found, the deployment is not possible");
 
             return;
         }
 
         testingOutput.Clear();
-        testingOutput.Add("Подключение к MetaMask и деплой...");
-
-        var client = ClientFactory.CreateClient("with-cookies");
-        var result = await client.GetFromJsonAsync<AbiBytecodeDto>("/api/contracts/abi-bytecode/{contractName}");
-
-        if (result is null || result.Abi is null || string.IsNullOrEmpty(result.Bytecode))
-        {
-            testingOutput.Add($"Не найдены Abi и Bytecode, деплой невозможен");
-
-            return;
-        }
-
-        var abi = result.Abi;
-        var bytecode = result.Bytecode;
-        var constructorArgs = new object[]
-        {
-            user.WalletAddress
-        };
+        testingOutput.Add("Connecting to MetaMask and launching deployment...");
 
         try
         {
-            var deployedAddress = await JS.InvokeAsync<string>(
-                "deployFunctions.deployWithMetaMask",
-                abi, bytecode, constructorArgs
-            );
+            var result = await JS.InvokeAsync<AbiBytecodeDto>(
+                "sendRequestViaBrowser",
+                "/api/contracts/abi-bytecode",
+                Model);
 
-            if (deployedAddress.StartsWith("ERROR"))
+            if (result is null || result.Abi is null || string.IsNullOrEmpty(result.Bytecode))
             {
-                testingOutput.Add("Ошибка: " + deployedAddress);
+                testingOutput.Add($"Abi and Bytecode were not found, deployment is not possible");
+
+                return;
             }
-            else
+
+            var abi = result.Abi;
+            var bytecode = result.Bytecode;
+            var constructorArgs = new object[]
             {
-                testingOutput.Add("Контракт успешно задеплоен по адресу:");
-                testingOutput.Add(deployedAddress);
+                user.WalletAddress
+            };
+
+            try
+            {
+                var deployedAddress = await JS.InvokeAsync<string>(
+                    "deployFunctions.deployWithMetaMask",
+                    abi, bytecode, constructorArgs
+                );
+
+                if (deployedAddress.StartsWith("ERROR"))
+                {
+                    testingOutput.Add($"Error: {deployedAddress}");
+                }
+                else
+                {
+                    testingOutput.Add($"The contract has been successfully signed at: {deployedAddress}");
+                }
             }
+            catch (Exception ex)
+            {
+                testingOutput.Add($"Caught exception: {ex.Message}");
+                throw;
+            }
+        }
+        catch (JSException jsEx)
+        {
+            testingOutput.Add($"RunDeploy JS error: {jsEx}");
+            Console.Error.WriteLine($"RunDeploy JS error: {jsEx}");
         }
         catch (Exception ex)
         {
-            testingOutput.Add($"Исключение при деплое: {ex.Message}");
+            testingOutput.Add($"RunDeploy error: {ex}");
+            Console.Error.WriteLine($"RunDeploy error: {ex}");
         }
     }
 }

@@ -5,6 +5,7 @@ window.highlightAll = function () {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 const codes = document.querySelectorAll('pre > code');
+
                 codes.forEach(code => {
                     if (code && code.parentNode) {
                         Prism.highlightElement(code);

@@ -1,8 +1,9 @@
 ﻿using System.Text.Json;
+using Application.DTOs;
 using Application.Interfaces;
-using Core.UseCases;
 using Infrastructure.Repositories.Helpers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace Infrastructure.Repositories
 {
@@ -11,7 +12,7 @@ namespace Infrastructure.Repositories
         private readonly string _solutionDirectory;
         private readonly string _configsPath;
 
-        public SmartContractRepository(IConfiguration configuration)
+        public SmartContractRepository(IConfiguration configuration, IHostEnvironment hostEnv)
         {
             var configsPath = configuration["HardhatConfigsPath"];
 
@@ -20,7 +21,7 @@ namespace Infrastructure.Repositories
                 throw new ArgumentException("Configs path is not found.");
             }
 
-            _solutionDirectory = SolutionPathHelper.GetSolutionRoot(configuration);
+            _solutionDirectory = SolutionPathHelper.GetSolutionRoot(configuration, hostEnv);
             _configsPath = Path.Combine(_solutionDirectory, configsPath);
         }
 
@@ -28,7 +29,7 @@ namespace Infrastructure.Repositories
 
         public string GetDeployedContractAddress(string contractName, string instancePath) => $"address of deployed contact {contractName}: WANTED";
 
-        public DeploySmartContractEntities? GetContractAbiBytecode(string contractName, string instancePath)
+        public AbiBytecodeDto? GetContractAbiBytecode(string contractName, string instancePath)
         {
             var path = Path.Combine(instancePath, "artifacts", "contracts", $"{contractName}.sol", $"{contractName}.json");
 
@@ -40,7 +41,7 @@ namespace Infrastructure.Repositories
             var json = File.ReadAllText(path);
             var parsed = JsonDocument.Parse(json).RootElement;
 
-            return new DeploySmartContractEntities
+            return new AbiBytecodeDto
             {
                 Abi = parsed.GetProperty("abi"),
                 Bytecode = parsed.GetProperty("bytecode").GetString()?.TrimStart('0', 'x')

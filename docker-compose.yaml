@@ -5,16 +5,20 @@ services:
       dockerfile: WebApp.dockerfile
       target: ${TARGET:-runtime-release}
       args:
-        CONFIG:       ${CONFIG:-Release}
+        CONFIGURATION: ${CONFIGURATION:-Release}
         DOTNET_FLAGS: ${DOTNET_FLAGS:-}
     image: testsmartcontracts-api:latest
     depends_on:
       db:
         condition: service_healthy
     ports:
+      - "8080:8080"  # nginx
       - "5000:8080"
+      - "5001:443"
     environment:
-      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_URLS: "https://+:443;http://+:8080"
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ASPNETCORE_Kestrel__Certificates__Default__Password}
+      ASPNETCORE_Kestrel__Certificates__Default__Path: ${ASPNETCORE_Kestrel__Certificates__Default__Path}
       CONFIGURATION: ${CONFIGURATION}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       API_BASE_URL: ${API_BASE_URL}
@@ -26,6 +30,7 @@ services:
       HOST_INSTANCES: "${PWD}/Instances"
     restart: unless-stopped
     volumes:
+      - ./https:/https:ro
       - keys-volume:/app/keys
       - ./Instances:/app/Instances
       - /var/run/docker.sock:/var/run/docker.sock   # local ok, perfectly need separate proj

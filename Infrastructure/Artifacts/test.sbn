@@ -1,0 +1,26 @@
+const { expect } = require("chai");
+
+describe("{{ contract_name }} – role checks", () => {
+  let contract, owner, addrs;
+
+  beforeEach(async () => {
+    [owner, ...addrs] = await ethers.getSigners();
+    const C = await ethers.getContractFactory("{{ contract_name }}");
+    contract = await C.deploy(owner.address);
+    // auto-authorize every role from spec.roles for addrs[0]
+    {{ for role in roles }}
+    await contract.connect(owner).set{{ role.name }}Authorization(addrs[0].address, true);
+    {{ end }}
+  });
+
+  it("rejects unauthorized access", async () => {
+    const bad = addrs[1];
+    {{ for fn in functions }}
+    {{ if fn.restricted_to &&  fn.restricted_to.size > 0 }}
+    await expect(
+      contract.connect(bad).{{ fn.name }}({{ for arg in fn.args }}{{ arg.name }}{{ if for.last }}{{ else }}, {{ end }}{{ end }})
+    ).to.be.revertedWith("Not an authorized {{ fn.restricted_to }}");
+    {{ end }}
+    {{ end }}
+  });
+});

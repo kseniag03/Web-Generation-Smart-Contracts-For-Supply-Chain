@@ -5,6 +5,7 @@ using Infrastructure.Repositories.Helpers;
 using System.Text.Json;
 using Application.Common;
 using Application.Interfaces;
+using Microsoft.Extensions.Hosting;
 
 namespace Infrastructure.Repositories
 {
@@ -13,7 +14,7 @@ namespace Infrastructure.Repositories
         private readonly string _solutionDirectory;
         private readonly string _templatesPath;
 
-        public ScribanRepository(IConfiguration configuration)
+        public ScribanRepository(IConfiguration configuration, IHostEnvironment hostEnv)
         {
             var tempatesPath = configuration["ContractTemplatesPath"];
             var configsPath = configuration["HardhatConfigsPath"];
@@ -23,7 +24,7 @@ namespace Infrastructure.Repositories
                 throw new ArgumentException("Templates or configs path is not found.");
             }
 
-            _solutionDirectory = SolutionPathHelper.GetSolutionRoot(configuration);
+            _solutionDirectory = SolutionPathHelper.GetSolutionRoot(configuration, hostEnv);
             _templatesPath = Path.Combine(_solutionDirectory, tempatesPath);
         }
 

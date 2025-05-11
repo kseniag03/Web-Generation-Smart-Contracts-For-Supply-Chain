@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Utilities.Interfaces;
+﻿using Utilities.Interfaces;
 
 namespace Utilities.Executors
 {
@@ -10,7 +9,7 @@ namespace Utilities.Executors
         private readonly string _scriptPath;
         private readonly string _scriptCheckPath;
 
-        public HardhatExecutor(IConfiguration config, ICommandExecutor cmd)
+        public HardhatExecutor(ICommandExecutor cmd)
         {
             _cmd = cmd;
             _scriptPath = Path.Combine(_baseDir, "Utilities/run-hardhat.sh");
@@ -29,7 +28,7 @@ namespace Utilities.Executors
             {
                 Console.WriteLine($"Directory not found: {absPath}");
 
-                // throw new Exception($"Directory not found: {absPath}");
+                throw new Exception($"Directory not found: {absPath}");
             }
 
             var instanceId = new FileInfo(instancePath).Name;
@@ -42,11 +41,27 @@ namespace Utilities.Executors
 
         }
 
-        public async Task<string> CompileContract(string instancePath) =>
-            await RunScript("compile", instancePath);
+        public async Task<string> CompileContract(string instancePath)
+        {
+            var output = await RunScript("compile", instancePath);
 
-        public async Task<string> TestContract(string instancePath) =>
-            await RunScript("test", instancePath);
+            Console.WriteLine("=== Hardhat Compile Output ===");
+            Console.WriteLine(output);
+            Console.WriteLine("=== Hardhat Compile Output Finish ===");
+
+            return output;
+        }
+
+        public async Task<string> TestContract(string instancePath)
+        {
+            var output = await RunScript("test", instancePath);
+
+            Console.WriteLine("=== Hardhat Test Output ===");
+            Console.WriteLine(output);
+            Console.WriteLine("=== Hardhat Test Output Finish ===");
+
+            return output;
+        }
 
         private async Task<string> RunScript(string command, string instancePath)
         {

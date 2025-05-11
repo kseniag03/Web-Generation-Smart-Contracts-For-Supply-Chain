@@ -64,7 +64,12 @@
         if (isAuthenticated)
         {
             login = state.User.Identity!.Name!;
-            role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user";
+            role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "user";
+        }
+        else
+        {
+            login = "unauthorized";
+            role = "user";
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using Core.UseCases;
+﻿using Application.DTOs;
 
 namespace Application.Interfaces
 {
@@ -6,7 +6,7 @@ namespace Application.Interfaces
     {
         string GetContractCode(string contractName, string instancePath);
         string GetDeployedContractAddress(string contractName, string instancePath);
-        DeploySmartContractEntities? GetContractAbiBytecode(string contractName, string instancePath);
+        AbiBytecodeDto? GetContractAbiBytecode(string contractName, string instancePath);
         void CopyBaseHardhatConfigs(string instancePath);
     }
 }

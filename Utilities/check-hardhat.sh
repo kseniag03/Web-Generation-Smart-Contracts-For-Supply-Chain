@@ -31,5 +31,10 @@ docker run --rm \
   hardhat-image \
   bash -c '
     cd /workspace
-    npm install
-    npx hardhat '"$CMD"
+    if [ ! -d node_modules ]; then
+      echo "Installing dependencies with npm install..."
+      npm install || { echo "npm install failed"; exit 1; }
+    else
+      echo "node_modules already present."
+    fi
+  '

@@ -63,7 +63,19 @@ namespace WebApp.Controllers
                         return default;
                     }
 
-                    // await _hh.SetupInstanceEnvironment(instancePath);
+                    try
+                    {
+
+                        await _hh.SetupInstanceEnvironment(instancePath);
+                        await _fh.SetupInstanceEnvironment(instancePath);
+                        await _sh.SetupInstanceEnvironment(instancePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        var error = ex.Message;
+
+                        Console.WriteLine($"Error via local debug without docker: {error}");
+                    }
 
                     return new
                     {
@@ -147,7 +159,7 @@ namespace WebApp.Controllers
             return await ContractAction(
                 paramsDto,
                 _sh.RunAnalysis,
-                result => Ok("Running security audit..."),
+                result => Ok(new { output = result }),
                 true,
                 _sh
             );
@@ -190,19 +202,16 @@ namespace WebApp.Controllers
         }
 
         /*
-        /// <summary>
-        /// Получает информацию о контракте из блокчейна
-        /// </summary>
         [HttpGet("contract-info")]
         public async Task<IActionResult> GetContractInfo(string contractAddress)
         {
             var contractInfo = await _contractService.GetContractInfoAsync(contractAddress);
+
             if (contractInfo == null)
                 return NotFound("Contract info not found.");
 
             return Ok(contractInfo);
-        }
-        */
+        }*/
 
         private async Task<IActionResult> ContractAction<T>(
             ContractParamsDto paramsDto,
@@ -231,6 +240,14 @@ namespace WebApp.Controllers
             try
             {
                 var result = await action(instancePath);
+
+                Console.WriteLine("=== ContractAction result ===");
+                Console.WriteLine(result == null ? "null" : $"[{result}]");
+
+                if (result is null)
+                {
+                    return BadRequest("Action returned null");
+                }
 
                 return resultHandler(result);
             }

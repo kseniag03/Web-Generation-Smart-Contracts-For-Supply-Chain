@@ -33,34 +33,29 @@ namespace Tests.ApplicationTests
         [Fact]
         public void GenerateContractCode_ShouldReturnGeneratedCode()
         {
-            // Arrange
             var contractName = "TestContract";
             var expectedCode = $"generated code for {contractName}";
+
             _ = _templateRepositoryMock.Setup(repo => repo.GenerateContractCode(AppConstants.DefaultContractAreaPath, AppConstants.DefaultYamlContent, string.Empty))
                 .Returns(() => expectedCode);
 
             var dto = new ContractParamsDto { };
-
-            // Act
             var result = _smartContractService.GenerateContractCode(dto, string.Empty);
 
-            // Assert
             Assert.Equal(expectedCode, result?.Result?.Code);
         }
 
         [Fact]
         public void GetContractCode_WithExistingContract_ShouldReturnCode()
         {
-            // Arrange
             var contractName = "ExistingContract";
             var expectedCode = $"contract {contractName} code: WANTED";
+
             _contractRepositoryMock.Setup(repo => repo.GetContractCode(contractName, string.Empty))
                 .Returns(expectedCode);
 
-            // Act
             var result = string.Empty; // _smartContractService.GetContractCode(contractName, string.Empty);
 
-            // Assert
             Assert.Equal(expectedCode, result);
         }
     }

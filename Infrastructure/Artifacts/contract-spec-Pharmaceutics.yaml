@@ -174,12 +174,12 @@ functions:
   - name: _applyPenalty
     args:
       - { name: id,          type: *ID }
-      - { name: reason,      type: string memory }
+      - { name: reason,      type: string calldata }
     visibility: internal
     restrictedTo: []
     body: |
       uint256 penalty = PENALTY_RATE;
-      // escrow logic skipped; integrate with payment hub
+      // integrate with payment hub
     emitEvents:
       - PenaltyApplied(id, penalty, reason)
 

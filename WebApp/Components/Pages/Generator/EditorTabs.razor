@@ -2,7 +2,6 @@
 @using System.Text.Json
 @using Application.Common
 @using Application.DTOs
-@inject IHttpClientFactory ClientFactory
 @inject IJSRuntime JS
 
 @if (ShowResults)
@@ -34,7 +33,7 @@
             var currentTab = ActiveTab;
             var currentContent = TabContents[currentTab];
             var currentLang = TabLanguage[currentTab];
-            var currentKey = $"code-{currentTab}-{currentContent.Length}";
+            var currentKey = $"{currentTab}-{currentContent}";
 
             <CodeContainer @key="@currentKey"
                            Content="@currentContent"
@@ -94,28 +93,4 @@
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", TabContents[ActiveTab]);
     }
-
-    /*
-    private string CommandOutput = string.Empty;
-
-    async Task HandleDeploy()
-    {
-        CommandOutput = await CallTool("abi-bytecode");
-    }
-
-    async Task HandleAudit() => CommandOutput = await CallTool("audit");
-    async Task HandleTest() => CommandOutput = await CallTool("test");
-    async Task HandleGasReport() => CommandOutput = await CallTool("gas-report");
-    async Task HandleCompile() => CommandOutput = await CallTool("compile");
-
-    async Task<string> CallTool(string cmd)
-    {
-        var client = ClientFactory.CreateClient("with-cookies");
-        var result = await client.PostAsJsonAsync($"/api/contracts/{cmd}", Model);
-        var txt = await result.Content.ReadAsStringAsync();
-
-        return txt.Contains("{")
-            ? JsonDocument.Parse(txt).RootElement.GetProperty("output").GetString() ?? txt
-            : txt;
-    }*/
 }
