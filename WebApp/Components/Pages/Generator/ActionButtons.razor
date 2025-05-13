@@ -7,289 +7,289 @@
 
 @if (ShowButtons)
 {
-    <div class="button-container">
+	<div class="button-container">
 
-        <div class="tooltip-container">
-            <button class="custom-btn" @onclick="RunDeploy" disabled="@(!canDeploy)"> Deploy </button>
+		<div class="tooltip-container">
+			<button class="custom-btn" @onclick="RunDeploy" disabled="@(!canDeploy)"> Deploy </button>
 
-            @if (!canDeploy)
-            {
-                <span class="tooltip-text">You do not have access to this functionality</span>
-            }
-        </div>
+			@if (!canDeploy)
+			{
+				<span class="tooltip-text">You do not have access to this functionality</span>
+			}
+		</div>
 
-        <div class="tooltip-container">
-            <button class="custom-btn" @onclick="RunAudit" disabled="@(!canAudit)"> Audit </button>
+		<div class="tooltip-container">
+			<button class="custom-btn" @onclick="RunAudit" disabled="@(!canAudit)"> Audit </button>
 
-            @if (!canAudit)
-            {
-                <span class="tooltip-text">You do not have access to this functionality</span>
-            }
-        </div>
+			@if (!canAudit)
+			{
+				<span class="tooltip-text">You do not have access to this functionality</span>
+			}
+		</div>
 
-        <div class="tooltip-container">
-            <button class="custom-btn" @onclick="RunGasReport" disabled="@(!canTest)"> Gas </button>
+		<div class="tooltip-container">
+			<button class="custom-btn" @onclick="RunGasReport" disabled="@(!canTest)"> Gas </button>
 
-            @if (!canTest)
-            {
-                <span class="tooltip-text">You do not have access to this functionality</span>
-            }
-        </div>
+			@if (!canTest)
+			{
+				<span class="tooltip-text">You do not have access to this functionality</span>
+			}
+		</div>
 
-        <div class="tooltip-container">
-            <button class="custom-btn" @onclick="RunTesting" disabled="@(!canTest)"> Testing </button>
+		<div class="tooltip-container">
+			<button class="custom-btn" @onclick="RunTesting" disabled="@(!canTest)"> Testing </button>
 
-            @if (!canTest)
-            {
-                <span class="tooltip-text">You do not have access to this functionality</span>
-            }
-        </div>
+			@if (!canTest)
+			{
+				<span class="tooltip-text">You do not have access to this functionality</span>
+			}
+		</div>
 
-        <button class="custom-btn" @onclick="RunCompile">Compile</button>
+		<button class="custom-btn" @onclick="RunCompile">Compile</button>
 
-    </div>
+	</div>
 
-    @if (testingOutput.Count > 0)
-    {
-        <div class="output-container">
-            <pre><code class="language-shell">@string.Join("\n", testingOutput)</code></pre>
-        </div>
-    }
+	@if (testingOutput.Count > 0)
+	{
+		<div class="output-container">
+			<pre><code class="language-shell">@string.Join("\n", testingOutput)</code></pre>
+		</div>
+	}
 }
 
 @code {
-    [Parameter] public ContractParamsDto Model { get; set; } = new();
+	[Parameter] public ContractParamsDto Model { get; set; } = new();
 
-    [Parameter] public bool ShowButtons { get; set; }
-    
-    /*
-    [Parameter] public EventCallback OnDeploy { get; set; }
-    [Parameter] public EventCallback OnAudit { get; set; }
-    [Parameter] public EventCallback OnTest { get; set; }
-    [Parameter] public EventCallback OnGasReport { get; set; }
-    [Parameter] public EventCallback OnCompile { get; set; }*/
+	[Parameter] public bool ShowButtons { get; set; }
 
-    private List<string> testingOutput = new();
+	/*
+	[Parameter] public EventCallback OnDeploy { get; set; }
+	[Parameter] public EventCallback OnAudit { get; set; }
+	[Parameter] public EventCallback OnTest { get; set; }
+	[Parameter] public EventCallback OnGasReport { get; set; }
+	[Parameter] public EventCallback OnCompile { get; set; }*/
 
-    private UserDto? user;
-    private bool canTest, canAudit, canDeploy;
+	private List<string> testingOutput = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var state = await Auth.GetAuthenticationStateAsync();
-            var isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+	private UserDto? user;
+	private bool canTest, canAudit, canDeploy;
 
-            if (isAuthenticated)
-            {
-                user = new UserDto
-                {
-                    Login = state.User.Identity!.Name!,
-                    Email = state.User.FindFirst("urn:email:login")?.Value,
-                    Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user",
-                    GitHubId = state.User.FindFirst("urn:github:login")?.Value,
-                    WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value
-                };
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			var state = await Auth.GetAuthenticationStateAsync();
+			var isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
 
-                canTest = IsInRole(user, "Tester", "Auditor", "Deployer", "Admin");
-                canAudit = IsInRole(user, "Auditor", "Deployer", "Admin");
-                canDeploy = IsInRole(user, "Deployer", "Admin");
-            }
-        }
-        catch (Exception ex)
-        {
-            var message = ex.Message;
-        }
-    }
+			if (isAuthenticated)
+			{
+				user = new UserDto
+					{
+						Login = state.User.Identity!.Name!,
+						Email = state.User.FindFirst("urn:email:login")?.Value,
+						Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "user",
+						GitHubId = state.User.FindFirst("urn:github:login")?.Value,
+						WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value
+					};
 
-    private bool IsInRole(UserDto user, params string[] roles) =>
-        roles.Any(r => r.Equals(user.Role, StringComparison.OrdinalIgnoreCase));
+				canTest = IsInRole(user, "Tester", "Auditor", "Deployer", "Admin");
+				canAudit = IsInRole(user, "Auditor", "Deployer", "Admin");
+				canDeploy = IsInRole(user, "Deployer", "Admin");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"[INIT FAIL] {ex.Message}");
+		}
+	}
 
-    private async Task RunCompile()
-    {
-        testingOutput.Clear();
-        testingOutput.Add("Compiling contract...");
+	private bool IsInRole(UserDto user, params string[] roles) =>
+		roles.Any(r => r.Equals(user.Role, StringComparison.OrdinalIgnoreCase));
 
-        try
-        {
-            var doc = await JS.InvokeAsync<JsonElement>(
-                "sendRequestViaBrowser",
-                "/api/contracts/compile",
-                Model);
+	private async Task RunCompile()
+	{
+		testingOutput.Clear();
+		testingOutput.Add("Compiling contract...");
 
-            var text = doc.GetProperty("output").GetString();
+		try
+		{
+			var doc = await JS.InvokeAsync<JsonElement>(
+				"sendRequestViaBrowser",
+				"/api/contracts/compile",
+				Model);
 
-            testingOutput.AddRange(
-                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                ?? new[] { "[No output]" });
-        }
-        catch (JSException jsEx)
-        {
-            testingOutput.Add($"RunCompile JS error: {jsEx}");
-            Console.Error.WriteLine($"RunCompile JS error: {jsEx}");
-        }
-        catch (Exception ex)
-        {
-            testingOutput.Add($"RunCompile error: {ex}");
-            Console.Error.WriteLine($"RunCompile error: {ex}");
-        }
-    }
+			var text = doc.GetProperty("output").GetString();
 
-    private async Task RunTesting()
-    {
-        testingOutput.Clear();
-        testingOutput.Add("Launching Hardhat testing...");
+			testingOutput.AddRange(
+				text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+				?? new[] { "[No output]" });
+		}
+		catch (JSException jsEx)
+		{
+			testingOutput.Add($"RunCompile JS error: {jsEx}");
+			Console.Error.WriteLine($"RunCompile JS error: {jsEx}");
+		}
+		catch (Exception ex)
+		{
+			testingOutput.Add($"RunCompile error: {ex}");
+			Console.Error.WriteLine($"RunCompile error: {ex}");
+		}
+	}
 
-        try
-        {
-            var doc = await JS.InvokeAsync<JsonElement>(
-                "sendRequestViaBrowser",
-                "/api/contracts/test",
-                Model);
+	private async Task RunTesting()
+	{
+		testingOutput.Clear();
+		testingOutput.Add("Launching Hardhat testing...");
 
-            var text = doc.GetProperty("output").GetString();
+		try
+		{
+			var doc = await JS.InvokeAsync<JsonElement>(
+				"sendRequestViaBrowser",
+				"/api/contracts/test",
+				Model);
 
-            testingOutput.AddRange(
-                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                ?? new[] { "[No output]" });
-        }
-        catch (JSException jsEx)
-        {
-            testingOutput.Add($"RunTesting JS error: {jsEx}");
-            Console.Error.WriteLine($"RunTesting JS error: {jsEx}");
-        }
-        catch (Exception ex)
-        {
-            testingOutput.Add($"RunTesting error: {ex}");
-            Console.Error.WriteLine($"RunTesting error: {ex}");
-        }
-    }
+			var text = doc.GetProperty("output").GetString();
 
-    private async Task RunGasReport()
-    {
-        testingOutput.Clear();
-        testingOutput.Add("Launching Foundry testing...");
+			testingOutput.AddRange(
+				text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+				?? new[] { "[No output]" });
+		}
+		catch (JSException jsEx)
+		{
+			testingOutput.Add($"RunTesting JS error: {jsEx}");
+			Console.Error.WriteLine($"RunTesting JS error: {jsEx}");
+		}
+		catch (Exception ex)
+		{
+			testingOutput.Add($"RunTesting error: {ex}");
+			Console.Error.WriteLine($"RunTesting error: {ex}");
+		}
+	}
 
-        try
-        {
-            var doc = await JS.InvokeAsync<JsonElement>(
-                "sendRequestViaBrowser",
-                "/api/contracts/gas-report",
-                Model);
+	private async Task RunGasReport()
+	{
+		testingOutput.Clear();
+		testingOutput.Add("Launching Foundry testing...");
 
-            var text = doc.GetProperty("output").GetString();
+		try
+		{
+			var doc = await JS.InvokeAsync<JsonElement>(
+				"sendRequestViaBrowser",
+				"/api/contracts/gas-report",
+				Model);
 
-            testingOutput.AddRange(
-                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                ?? new[] { "[No output]" });
-        }
-        catch (JSException jsEx)
-        {
-            testingOutput.Add($"RunGasReport JS error: {jsEx}");
-            Console.Error.WriteLine($"RunGasReport JS error: {jsEx}");
-        }
-        catch (Exception ex)
-        {
-            testingOutput.Add($"RunGasReport error: {ex}");
-            Console.Error.WriteLine($"RunGasReport error: {ex}");
-        }
-    }
+			var text = doc.GetProperty("output").GetString();
 
-    private async Task RunAudit()
-    {
-        testingOutput.Clear();
-        testingOutput.Add("Launching Slither audit...");
+			testingOutput.AddRange(
+				text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+				?? new[] { "[No output]" });
+		}
+		catch (JSException jsEx)
+		{
+			testingOutput.Add($"RunGasReport JS error: {jsEx}");
+			Console.Error.WriteLine($"RunGasReport JS error: {jsEx}");
+		}
+		catch (Exception ex)
+		{
+			testingOutput.Add($"RunGasReport error: {ex}");
+			Console.Error.WriteLine($"RunGasReport error: {ex}");
+		}
+	}
 
-        try
-        {
-            var doc = await JS.InvokeAsync<JsonElement>(
-                "sendRequestViaBrowser",
-                "/api/contracts/audit",
-                Model);
+	private async Task RunAudit()
+	{
+		testingOutput.Clear();
+		testingOutput.Add("Launching Slither audit...");
 
-            var text = doc.GetProperty("output").GetString();
+		try
+		{
+			var doc = await JS.InvokeAsync<JsonElement>(
+				"sendRequestViaBrowser",
+				"/api/contracts/audit",
+				Model);
 
-            testingOutput.AddRange(
-                text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                ?? new[] { "[No output]" });
-        }
-        catch (JSException jsEx)
-        {
-            testingOutput.Add($"RunAudit JS error: {jsEx}");
-            Console.Error.WriteLine($"RunAudit JS error: {jsEx}");
-        }
-        catch (Exception ex)
-        {
-            testingOutput.Add($"RunAudit error: {ex}");
-            Console.Error.WriteLine($"RunAudit error: {ex}");
-        }
-    }
+			var text = doc.GetProperty("output").GetString();
 
-    private async Task RunDeploy()
-    {
-        if (user is null || string.IsNullOrEmpty(user.WalletAddress))
-        {
-            testingOutput.Add($"The user or his Metamask wallet was not found, the deployment is not possible");
+			testingOutput.AddRange(
+				text?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+				?? new[] { "[No output]" });
+		}
+		catch (JSException jsEx)
+		{
+			testingOutput.Add($"RunAudit JS error: {jsEx}");
+			Console.Error.WriteLine($"RunAudit JS error: {jsEx}");
+		}
+		catch (Exception ex)
+		{
+			testingOutput.Add($"RunAudit error: {ex}");
+			Console.Error.WriteLine($"RunAudit error: {ex}");
+		}
+	}
 
-            return;
-        }
+	private async Task RunDeploy()
+	{
+		if (user is null || string.IsNullOrEmpty(user.WalletAddress))
+		{
+			testingOutput.Add($"The user or his Metamask wallet was not found, the deployment is not possible");
 
-        testingOutput.Clear();
-        testingOutput.Add("Connecting to MetaMask and launching deployment...");
+			return;
+		}
 
-        try
-        {
-            var result = await JS.InvokeAsync<AbiBytecodeDto>(
-                "sendRequestViaBrowser",
-                "/api/contracts/abi-bytecode",
-                Model);
+		testingOutput.Clear();
+		testingOutput.Add("Connecting to MetaMask and launching deployment...");
 
-            if (result is null || result.Abi is null || string.IsNullOrEmpty(result.Bytecode))
-            {
-                testingOutput.Add($"Abi and Bytecode were not found, deployment is not possible");
+		try
+		{
+			var result = await JS.InvokeAsync<AbiBytecodeDto>(
+				"sendRequestViaBrowser",
+				"/api/contracts/abi-bytecode",
+				Model);
 
-                return;
-            }
+			if (result is null || result.Abi is null || string.IsNullOrEmpty(result.Bytecode))
+			{
+				testingOutput.Add($"Abi and Bytecode were not found, deployment is not possible");
 
-            var abi = result.Abi;
-            var bytecode = result.Bytecode;
-            var constructorArgs = new object[]
-            {
-                user.WalletAddress
-            };
+				return;
+			}
 
-            try
-            {
-                var deployedAddress = await JS.InvokeAsync<string>(
-                    "deployFunctions.deployWithMetaMask",
-                    abi, bytecode, constructorArgs
-                );
+			var abi = result.Abi;
+			var bytecode = result.Bytecode;
+			var constructorArgs = new object[]
+			{
+				user.WalletAddress
+			};
 
-                if (deployedAddress.StartsWith("ERROR"))
-                {
-                    testingOutput.Add($"Error: {deployedAddress}");
-                }
-                else
-                {
-                    testingOutput.Add($"The contract has been successfully signed at: {deployedAddress}");
-                }
-            }
-            catch (Exception ex)
-            {
-                testingOutput.Add($"Caught exception: {ex.Message}");
-                throw;
-            }
-        }
-        catch (JSException jsEx)
-        {
-            testingOutput.Add($"RunDeploy JS error: {jsEx}");
-            Console.Error.WriteLine($"RunDeploy JS error: {jsEx}");
-        }
-        catch (Exception ex)
-        {
-            testingOutput.Add($"RunDeploy error: {ex}");
-            Console.Error.WriteLine($"RunDeploy error: {ex}");
-        }
-    }
+			try
+			{
+				var deployedAddress = await JS.InvokeAsync<string>(
+					"deployFunctions.deployWithMetaMask",
+					abi, bytecode, constructorArgs
+				);
+
+				if (deployedAddress.StartsWith("ERROR"))
+				{
+					testingOutput.Add($"Error: {deployedAddress}");
+				}
+				else
+				{
+					testingOutput.Add($"The contract has been successfully signed at: {deployedAddress}");
+				}
+			}
+			catch (Exception ex)
+			{
+				testingOutput.Add($"Caught exception: {ex.Message}");
+				throw;
+			}
+		}
+		catch (JSException jsEx)
+		{
+			testingOutput.Add($"RunDeploy JS error: {jsEx}");
+			Console.Error.WriteLine($"RunDeploy JS error: {jsEx}");
+		}
+		catch (Exception ex)
+		{
+			testingOutput.Add($"RunDeploy error: {ex}");
+			Console.Error.WriteLine($"RunDeploy error: {ex}");
+		}
+	}
 }

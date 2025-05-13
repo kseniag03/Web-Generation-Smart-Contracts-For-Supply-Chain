@@ -5,12 +5,21 @@ ARG CONFIGURATION=Release
 ARG DOTNET_FLAGS=""
 
 WORKDIR /src
+
 COPY *.sln ./
+
+COPY WebApp/WebApp.csproj WebApp/
+COPY Application/Application.csproj Application/
+COPY Core/Core.csproj Core/
+COPY Infrastructure/Infrastructure.csproj Infrastructure/
+COPY Tests/Tests.csproj Tests/
+COPY Utilities/Utilities.csproj Utilities/
+
 COPY WebApp/         WebApp/
 COPY Application/    Application/
 COPY Core/           Core/
 COPY Infrastructure/ Infrastructure/
-COPY Tests/ Tests/
+COPY Tests/          Tests/
 COPY Utilities/      Utilities/
 
 RUN dotnet restore
@@ -23,14 +32,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime-release
 WORKDIR /app
 
 COPY --from=build /app/publish/ .
-
-COPY ./https/dev-certificate.pfx /https/dev-certificate.pfx
-COPY ./https/root.crt /usr/local/share/ca-certificates/custom.crt
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
-    update-ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

@@ -1,6 +1,7 @@
 using Infrastructure.Data;
 using Infrastructure.DI;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Net;
@@ -9,20 +10,9 @@ using WebApp.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (builder.Environment.IsProduction())
-{
-    builder.WebHost.ConfigureKestrel(options =>
-    {
-        options.ConfigureHttpsDefaults(httpsOptions =>
-        {
-            httpsOptions.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-        });
-    });
-}
-
-builder.Services.AddRazorComponents()
+builder.Services.AddRazorComponents(options =>
+    options.DetailedErrors = builder.Environment.IsDevelopment())
     .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents()
     .AddAuthenticationStateSerialization();
 
 builder.Services.AddCascadingAuthenticationState();
@@ -49,7 +39,6 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddUtilities();
 
-
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"));
 
@@ -58,20 +47,30 @@ builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+}
+
+app.UseStaticFiles();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedProto,
+        KnownProxies = { IPAddress.Parse("127.0.0.1") }
+    });
+}
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
@@ -81,6 +80,10 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ContractsDbContext>();
+    var pendingMigrations = db.Database.GetPendingMigrations().ToList();
+
+    Console.WriteLine("Pending migrations:");
+    pendingMigrations.ForEach(Console.WriteLine);
 
     try
     {
@@ -96,5 +99,7 @@ using (var scope = app.Services.CreateScope())
         var message = ex.Message;
     }
 }
+
+app.Logger.LogInformation("App has started in {env}", app.Environment.EnvironmentName);
 
 app.Run();

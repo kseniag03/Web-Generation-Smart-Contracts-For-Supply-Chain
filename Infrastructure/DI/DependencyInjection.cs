@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,9 +38,9 @@ namespace Infrastructure.DI
             }
 
             var adminLogin = Environment.GetEnvironmentVariable("ADMIN_LOGIN") ?? AppConstants.AdminLogin;
-            var adminPassHash = Environment.GetEnvironmentVariable("ADMIN_PASSHASH");
+            var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
 
-            if (!string.IsNullOrEmpty(adminPassHash) && !await db.Users.AnyAsync(u => u.Login == adminLogin))
+            if (!string.IsNullOrEmpty(adminPassword) && !await db.Users.AnyAsync(u => u.Login == adminLogin))
             {
                 var admin = new User
                 {
@@ -50,10 +51,13 @@ namespace Infrastructure.DI
                     GitHubId = string.Empty
                 };
 
+                var hasher = new PasswordHasher<User>();
+                var passwordHash = hasher.HashPassword(admin, adminPassword);
+
                 admin.Userauth = new Userauth
                 {
                     IdUser = admin.IdUser,
-                    PasswordHash = adminPassHash
+                    PasswordHash = passwordHash
                 };
 
                 await RoleHelper.AssignRole(db, admin, RoleType.Admin);
@@ -93,7 +97,7 @@ namespace Infrastructure.DI
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            services
+            var auth = services
                 .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
                 {
@@ -119,11 +123,17 @@ namespace Infrastructure.DI
                             return Task.CompletedTask;
                         }
                     };
-                })
-                .AddOAuth("GitHub", options =>
+                });
+
+            var githubClientId = configuration["GitHubClientId"];
+            var githubClientSecret = configuration["GitHubClientSecret"];
+
+            if (!string.IsNullOrEmpty(githubClientId) && !string.IsNullOrEmpty(githubClientSecret))
+            {
+                auth.AddOAuth("GitHub", options =>
                 {
-                    options.ClientId = configuration["GitHubClientId"] ?? throw new ArgumentException("Not found GitHubClientId in configs");
-                    options.ClientSecret = configuration["GitHubClientSecret"] ?? throw new ArgumentException("Not found GitHubClientSecret in configs");
+                    options.ClientId = githubClientId;
+                    options.ClientSecret = githubClientSecret;
                     options.CallbackPath = new PathString("/oauth-github");
                     options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
                     options.TokenEndpoint = "https://github.com/login/oauth/access_token";
@@ -236,6 +246,7 @@ namespace Infrastructure.DI
                         }
                     };
                 });
+            }
 
             return services;
         }

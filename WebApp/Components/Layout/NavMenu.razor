@@ -1,77 +1,91 @@
 ﻿@inject AuthenticationStateProvider Auth
 
 <div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">WebApp</a>
-    </div>
+	<div class="container-fluid">
+		<a class="navbar-brand" href="">WebApp</a>
+	</div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-code-nav-menu" aria-hidden="true"></span> Generator
-            </NavLink>
-        </div>
+	<nav class="nav flex-column">
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+				<span class="bi bi-code-nav-menu" aria-hidden="true"></span> Generator
+			</NavLink>
+		</div>
 
-        @if (isAuthenticated)
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="counter">
-                    <span class="bi bi-list-check-nav-menu" aria-hidden="true"></span> History
-                </NavLink>
-            </div>
-        }
+		@if (isAuthenticated)
+		{
+			<div class="nav-item px-3">
+				<NavLink class="nav-link" href="counter">
+					<span class="bi bi-list-check-nav-menu" aria-hidden="true"></span> History
+				</NavLink>
+			</div>
+		}
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">
-                <span class="bi bi-person-circle-nav-menu" aria-hidden="true"></span> LoginPage
-            </NavLink>
-        </div>
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="login">
+				<span class="bi bi-person-circle-nav-menu" aria-hidden="true"></span> LoginPage
+			</NavLink>
+		</div>
 
-        @if (IsAdmin)
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="weather">
-                    <span class="bi bi-journal-text-nav-menu" aria-hidden="true"></span> AdminMonitoring
-                </NavLink>
-            </div>
-        }
-    </nav>
+		@if (IsAdmin)
+		{
+			<div class="nav-item px-3">
+				<NavLink class="nav-link" href="weather">
+					<span class="bi bi-journal-text-nav-menu" aria-hidden="true"></span> AdminMonitoring
+				</NavLink>
+			</div>
+		}
+	</nav>
 </div>
 
 @if (isAuthenticated)
 {
-    <div class="p-3 text-muted small">
-        Logged in as: <strong>@login</strong><br />
-        Role: <strong>@role</strong><br />
-    </div>
+	<div class="p-3 text-muted small">
+		Logged in as: <strong>@login</strong><br />
+		Role: <strong>@role</strong><br />
+	</div>
+}
+else
+{
+	<div class="p-3 text-muted small">
+		<strong>@login</strong><br />
+		Role: <strong>@role</strong><br />
+	</div>
 }
 
 @code {
-    private bool isAuthenticated;
-    private string? login;
-    private string? role;
+	private bool isAuthenticated;
+	private string? login;
+	private string? role;
 
-    protected override async Task OnInitializedAsync()
-    {
-        var state = await Auth.GetAuthenticationStateAsync();
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			var state = await Auth.GetAuthenticationStateAsync();
 
-        isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+			isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
 
-        if (isAuthenticated)
-        {
-            login = state.User.Identity!.Name!;
-            role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "user";
-        }
-        else
-        {
-            login = "unauthorized";
-            role = "user";
-        }
-    }
+			if (isAuthenticated)
+			{
+				login = state.User.Identity!.Name!;
+				role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "user";
+			}
+			else
+			{
+				login = "unauthorized";
+				role = "user";
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"[INIT FAIL] {ex.Message}");
+		}
+	}
 
-    private bool IsAdmin => string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
+	private bool IsAdmin => string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
 }

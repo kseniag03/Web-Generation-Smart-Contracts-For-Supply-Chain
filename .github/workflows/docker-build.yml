@@ -5,40 +5,57 @@ on:
     branches: [ master ]
 
 env:
-  IMAGE_NAME: kganina/web-generation-smart-contracts-for-supply-chain
   TAG: latest
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: kganina/web-generation-smart-contracts-for-supply-chain
+            dockerfile: WebApp.dockerfile
+            context: .
+            target: runtime-release
+          - image: kganina/foundry-image
+            dockerfile: Utilities/ExternalTools/Foundry.dockerfile
+            context: .
+          - image: kganina/hardhat-image
+            dockerfile: Utilities/ExternalTools/Hardhat.dockerfile
+            context: .
+          - image: kganina/slither-image
+            dockerfile: Utilities/ExternalTools/Slither.dockerfile
+            context: .
+
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (мульти-арх)
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Set up Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push ${{ matrix.image }}
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: WebApp.dockerfile
-          target: runtime-release           # runtime-debug
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.TAG }}
+          tags: ${{ matrix.image }}:${{ env.TAG }}
           cache-from: type=gha
-          cache-to:   type=gha,mode=max
+          cache-to: type=gha,mode=max
+          target: ${{ matrix.target || '' }}

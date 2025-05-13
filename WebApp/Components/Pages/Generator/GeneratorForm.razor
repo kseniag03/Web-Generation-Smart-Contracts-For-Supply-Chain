@@ -10,132 +10,132 @@
 
 <div class="main-container">
 
-    <div class="left-panel">
+	<div class="left-panel">
 
-        <button class="custom-btn" @onclick="HandleGenerate">Generate</button>
+		<button class="custom-btn" @onclick="HandleGenerate">Generate</button>
 
-        <EditorTabs Model="@Model"
-                    ShowResults="@ShowResults"
-                    Tabs="@Tabs"
-                    TabContents="@TabContents"
-                    ActiveTab="@ActiveTab"
-                    IsEditing="@IsEditing"
-                    OnEditToggle="@OnEditToggle"
-                    OnTabSelected="@OnTabSelected"
-                    OnCodeChanged="@UpdateTabContent" />
-    </div>
+		<EditorTabs Model="@Model"
+					ShowResults="@ShowResults"
+					Tabs="@Tabs"
+					TabContents="@TabContents"
+					ActiveTab="@ActiveTab"
+					IsEditing="@IsEditing"
+					OnEditToggle="@OnEditToggle"
+					OnTabSelected="@OnTabSelected"
+					OnCodeChanged="@UpdateTabContent" />
+	</div>
 
-    <div class="right-panel">
-        <RightPanel Model="Model"
-                    YamlContent="@YamlContent"
-                    ShowYamlEditor="ShowYamlEditor"
-                    CanSetup="CanSetup"
-                    OnSetup="HandleSetup"
-                    OnYamlChanged="OnYamlChanged" />
-    </div>
+	<div class="right-panel">
+		<RightPanel Model="Model"
+					YamlContent="@YamlContent"
+					ShowYamlEditor="ShowYamlEditor"
+					CanSetup="CanSetup"
+					OnSetup="HandleSetup"
+					OnYamlChanged="OnYamlChanged" />
+	</div>
 
 </div>
 <div class="main-container">
 </div>
 
 @code {
-    private ContractParamsDto Model = new();
+	private ContractParamsDto Model = new();
 
-    private bool CanSetup => !string.IsNullOrEmpty(Model.Area);
-    private bool ShowYamlEditor;
-    private bool ShowResults;
-    private bool IsEditing;
-    private int ActiveTab;
-    private string YamlContent = AppConstants.DefaultYamlContent;
+	private bool CanSetup => !string.IsNullOrEmpty(Model.Area);
+	private bool ShowYamlEditor;
+	private bool ShowResults;
+	private bool IsEditing;
+	private int ActiveTab;
+	private string YamlContent = AppConstants.DefaultYamlContent;
 
-    private string[] Tabs = { "Contract", "Test", "Gas Report" };
-    private string[] TabContents = new string[3] { "", "", "" };
+	private string[] Tabs = { "Contract", "Test", "Gas Report" };
+	private string[] TabContents = new string[3] { "", "", "" };
 
-    private async Task HandleSetup()
-    {
-        try
-        {
-            var doc = await JS.InvokeAsync<JsonElement>(
-                "sendRequestViaBrowser",
-                "/api/contracts/setup",
-                Model);
+	private async Task HandleSetup()
+	{
+		try
+		{
+			var doc = await JS.InvokeAsync<JsonElement>(
+				"sendRequestViaBrowser",
+				"/api/contracts/setup",
+				Model);
 
-            YamlContent = doc.GetProperty("yaml").GetString() ?? AppConstants.DefaultYamlContent;
-            ShowYamlEditor = true;
-        }
-        catch (JSException jsEx)
-        {
-            Console.Error.WriteLine($"HandleSetup JS error: {jsEx}");
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"HandleSetup error: {ex}");
-        }
-    }
+			YamlContent = doc.GetProperty("yaml").GetString() ?? AppConstants.DefaultYamlContent;
+			ShowYamlEditor = true;
+		}
+		catch (JSException jsEx)
+		{
+			Console.Error.WriteLine($"HandleSetup JS error: {jsEx}");
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"HandleSetup error: {ex}");
+		}
+	}
 
-    private void OnYamlChanged(string newYaml)
-    {
-        YamlContent =
-            string.IsNullOrEmpty(newYaml) || string.IsNullOrWhiteSpace(newYaml)
-            ? AppConstants.DefaultYamlContent
-            : newYaml;
-    }
+	private void OnYamlChanged(string newYaml)
+	{
+		YamlContent =
+			string.IsNullOrEmpty(newYaml) || string.IsNullOrWhiteSpace(newYaml)
+			? AppConstants.DefaultYamlContent
+			: newYaml;
+	}
 
-    private async Task HandleGenerate()
-    {
-        try
-        {
-            Model.LayoutYaml = YamlContent;
+	private async Task HandleGenerate()
+	{
+		try
+		{
+			Model.LayoutYaml = YamlContent;
 
-            var data = await JS.InvokeAsync<JsonElement>(
-                "sendRequestViaBrowser",
-                "/api/contracts/generate",
-                Model);
+			var data = await JS.InvokeAsync<JsonElement>(
+				"sendRequestViaBrowser",
+				"/api/contracts/generate",
+				Model);
 
-            TabContents[0] = data.GetProperty("code").GetString() ?? "";
-            TabContents[1] = data.GetProperty("testScript").GetString() ?? "";
-            TabContents[2] = data.GetProperty("gasReport").GetString() ?? "";
+			TabContents[0] = data.GetProperty("code").GetString() ?? "";
+			TabContents[1] = data.GetProperty("testScript").GetString() ?? "";
+			TabContents[2] = data.GetProperty("gasReport").GetString() ?? "";
 
-            ShowResults = true;
-            IsEditing = false;
-        }
-        catch (JSException jsEx)
-        {
-            Console.Error.WriteLine($"HandleGenerate JS error: {jsEx}");
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"HandleGenerate error: {ex}");
-        }
-    }
+			ShowResults = true;
+			IsEditing = false;
+		}
+		catch (JSException jsEx)
+		{
+			Console.Error.WriteLine($"HandleGenerate JS error: {jsEx}");
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"HandleGenerate error: {ex}");
+		}
+	}
 
-    private void OnTabSelected(int idx)
-    {
-        ActiveTab = idx;
-        IsEditing = false;
-    }
+	private void OnTabSelected(int idx)
+	{
+		ActiveTab = idx;
+		IsEditing = false;
+	}
 
-    private async Task OnEditToggle()
-    {
-        if (IsEditing)
-        {
-            var payload = new { Model.Area, Tab = Tabs[ActiveTab], Code = TabContents[ActiveTab] };
-            var result = await JS.InvokeAsync<JsonElement>(
-                "sendRequestViaBrowser",
-                "/api/contracts/update-code",
-                payload); // need to add endpoint
+	private async Task OnEditToggle()
+	{
+		if (IsEditing)
+		{/*
+			var payload = new { Model.Area, Tab = Tabs[ActiveTab], Code = TabContents[ActiveTab] };
+			var result = await JS.InvokeAsync<JsonElement>(
+				"sendRequestViaBrowser",
+				"/api/contracts/update-code",
+			payload); // need to add endpoint*/
 
-            IsEditing = false;
-        }
-        else
-        {
-            IsEditing = true;
-        }
-    }
+			IsEditing = false;
+		}
+		else
+		{
+			IsEditing = true;
+		}
+	}
 
-    private Task UpdateTabContent((int tab, string code) update)
-    {
-        TabContents[update.tab] = update.code;
-        return Task.CompletedTask;
-    }
+	private Task UpdateTabContent((int tab, string code) update)
+	{
+		TabContents[update.tab] = update.code;
+		return Task.CompletedTask;
+	}
 }

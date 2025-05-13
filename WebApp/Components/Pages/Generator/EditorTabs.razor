@@ -6,91 +6,91 @@
 
 @if (ShowResults)
 {
-    <div class="button-container">
-        <button class="custom-btn" @onclick="OnEditToggle">
-            @(IsEditing ? "Save" : "Edit")
-        </button>
-    </div>
+	<div class="button-container">
+		<button class="custom-btn" @onclick="OnEditToggle">
+			@(IsEditing ? "Save" : "Edit")
+		</button>
+	</div>
 
-    <div class="code-container">
-        <div class="tab-container">
-            @for (int i = 0; i < Tabs.Length; i++)
-            {
-                var index = i;
-                <button class="@GetTabClass(index)" @onclick="() => SetTab(index)">@Tabs[index]</button>
-            }
+	<div class="code-container">
+		<div class="tab-container">
+			@for (int i = 0; i < Tabs.Length; i++)
+			{
+				var index = i;
+				<button class="@GetTabClass(index)" @onclick="() => SetTab(index)">@Tabs[index]</button>
+			}
 
-        </div>
+		</div>
 
-        <button class="copy-btn" @onclick="CopyToClipboard">📋 Copy</button>
+		<button class="copy-btn" @onclick="CopyToClipboard">📋 Copy</button>
 
-        @if (IsEditing)
-        {
-            <textarea class="code-editor" @bind="CurrentTabContent" @bind:event="oninput"></textarea>
-        }
-        else
-        {
-            var currentTab = ActiveTab;
-            var currentContent = TabContents[currentTab];
-            var currentLang = TabLanguage[currentTab];
-            var currentKey = $"{currentTab}-{currentContent}";
+		@if (IsEditing)
+		{
+			<textarea class="code-editor" @bind="CurrentTabContent" @bind:event="oninput"></textarea>
+		}
+		else
+		{
+			var currentTab = ActiveTab;
+			var currentContent = TabContents[currentTab];
+			var currentLang = TabLanguage[currentTab];
+			var currentKey = $"{currentTab}-{currentContent}";
 
-            <CodeContainer @key="@currentKey"
-                           Content="@currentContent"
-                           Language="@currentLang" />
-        }
-    </div>
+			<CodeContainer @key="@currentKey"
+						   Content="@currentContent"
+						   Language="@currentLang" />
+		}
+	</div>
 
-    <ActionButtons Model="@Model" ShowButtons="ShowResults" />
+	<ActionButtons Model="@Model" ShowButtons="ShowResults" />
 }
 
 @code {
-    [Parameter] public ContractParamsDto Model { get; set; } = new();
+	[Parameter] public ContractParamsDto Model { get; set; } = new();
 
-    [Parameter] public bool ShowResults { get; set; }
-    [Parameter] public bool IsEditing { get; set; }
+	[Parameter] public bool ShowResults { get; set; }
+	[Parameter] public bool IsEditing { get; set; }
 
-    [Parameter] public int ActiveTab { get; set; }
-    [Parameter] public string[] Tabs { get; set; } = new[] { "Contract", "Test", "Gas Report" };
-    [Parameter] public string[] TabContents { get; set; } = new string[3];
+	[Parameter] public int ActiveTab { get; set; }
+	[Parameter] public string[] Tabs { get; set; } = new[] { "Contract", "Test", "Gas Report" };
+	[Parameter] public string[] TabContents { get; set; } = new string[3] { "", "", "" };
 
-    [Parameter] public EventCallback OnEditToggle { get; set; }
-    [Parameter] public EventCallback<int> OnTabSelected { get; set; }
-    [Parameter] public EventCallback<(int tab, string code)> OnCodeChanged { get; set; }
+	[Parameter] public EventCallback OnEditToggle { get; set; }
+	[Parameter] public EventCallback<int> OnTabSelected { get; set; }
+	[Parameter] public EventCallback<(int tab, string code)> OnCodeChanged { get; set; }
 
-    private string GetTabClass(int index) => index == ActiveTab ? "tab active" : "tab";
+	private string GetTabClass(int index) => index == ActiveTab ? "tab active" : "tab";
 
-    private static readonly string[] TabLanguage = new[]
-    {
-        AppConstants.SolidityLanguage,
-        AppConstants.JavaScriptLanguage,
-        AppConstants.SolidityLanguage
-    };
+	private static readonly string[] TabLanguage = new[]
+	{
+		AppConstants.SolidityLanguage,
+		AppConstants.JavaScriptLanguage,
+		AppConstants.SolidityLanguage
+	};
 
-    private string CurrentTabContent
-    {
-        get => TabContents[ActiveTab];
-        set
-        {
-            if (TabContents[ActiveTab] != value)
-            {
-                TabContents[ActiveTab] = value;
-                _ = OnCodeChanged.InvokeAsync((ActiveTab, value));
-            }
-        }
-    }
+	private string CurrentTabContent
+	{
+		get => TabContents[ActiveTab];
+		set
+		{
+			if (TabContents[ActiveTab] != value)
+			{
+				TabContents[ActiveTab] = value;
+				_ = OnCodeChanged.InvokeAsync((ActiveTab, value));
+			}
+		}
+	}
 
-    private async void SetTab(int index)
-    {
-        if (index >= 0 && index < Tabs.Length)
-        {
-            ActiveTab = index;
-            await OnTabSelected.InvokeAsync(index);
-        }
-    }
+	private async void SetTab(int index)
+	{
+		if (index >= 0 && index < Tabs.Length)
+		{
+			ActiveTab = index;
+			await OnTabSelected.InvokeAsync(index);
+		}
+	}
 
-    private async Task CopyToClipboard()
-    {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", TabContents[ActiveTab]);
-    }
+	private async Task CopyToClipboard()
+	{
+		await JS.InvokeVoidAsync("navigator.clipboard.writeText", TabContents[ActiveTab]);
+	}
 }

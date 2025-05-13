@@ -138,6 +138,7 @@ functions:
       Label storage label = labels[labelId];
       require(label.id != 0, "Label does not exist");
       require(!label.voided, "Label already voided");
+      require(msg.sender == label.sender || msg.sender == label.receiver, "Not party of this label");
       label.voided = true;
     emitEvents:
       - LabelVoided(labelId, msg.sender)
