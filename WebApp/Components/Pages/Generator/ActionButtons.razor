@@ -28,7 +28,7 @@
 		</div>
 
 		<div class="tooltip-container">
-			<button class="custom-btn" @onclick="RunGasReport" disabled="@(!canTest)"> Gas </button>
+			<button class="custom-btn" @onclick="RunTesting" disabled="@(!canTest)"> Test </button>
 
 			@if (!canTest)
 			{
@@ -37,7 +37,7 @@
 		</div>
 
 		<div class="tooltip-container">
-			<button class="custom-btn" @onclick="RunTesting" disabled="@(!canTest)"> Testing </button>
+			<button class="custom-btn" @onclick="RunGasReport" disabled="@(!canTest)"> Gas </button>
 
 			@if (!canTest)
 			{

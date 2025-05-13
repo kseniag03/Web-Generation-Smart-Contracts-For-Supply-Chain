@@ -1,4 +1,5 @@
 ﻿@page "/login"
+@using Application.DTOs
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider Auth
 @inject IJSRuntime JS
@@ -95,10 +96,10 @@ else
 	private string registrationMessage = "";
 	private string? errorMessage;
 
-	private LoginModel loginModel = new();
-	private RegisterModel registerModel = new();
-	private ChangePasswordModel changePasswordModel = new();
-	private UserModel user = new();
+	private LoginDto loginModel = new();
+	private RegisterDto registerModel = new();
+	private ChangePasswordDto changePasswordModel = new();
+	private UserDto user = new();
 
 	private const bool AllowManyWallets = false;
 
@@ -155,7 +156,7 @@ else
 
 		try
 		{
-			user = await JS.InvokeAsync<UserModel>(
+			user = await JS.InvokeAsync<UserDto>(
 				"sendRequestViaBrowser",
 				"/api/auth/login",
 				loginModel
@@ -183,7 +184,7 @@ else
 
 		try
 		{
-			user = await JS.InvokeAsync<UserModel>(
+			user = await JS.InvokeAsync<UserDto>(
 				"sendRequestViaBrowser",
 				"/api/auth/register",
 				registerModel
@@ -211,7 +212,7 @@ else
 
 		try
 		{
-			_ = await JS.InvokeAsync<UserModel>(
+			_ = await JS.InvokeAsync<UserDto>(
 				"sendRequestViaBrowser",
 				"/api/auth/change-password",
 				changePasswordModel
@@ -289,33 +290,5 @@ else
 		var minIdx = Array.IndexOf(RoleRank, min.Trim().ToLowerInvariant());
 
 		return idx >= 0 && idx >= minIdx;
-	}
-
-	private class LoginModel
-	{
-		public string Login { get; set; } = "";
-		public string Password { get; set; } = "";
-		public bool RememberMe { get; set; }
-	}
-
-	private class RegisterModel
-	{
-		public string Login { get; set; } = "";
-		public string Password { get; set; } = "";
-		public string? Email { get; set; }
-	}
-
-	private class ChangePasswordModel
-	{
-		public string OldPassword { get; set; } = "";
-		public string NewPassword { get; set; } = "";
-	}
-
-	private class UserModel
-	{
-		public string Login { get; set; } = "";
-		public string Role { get; set; } = "User";
-		public string? GitHubId { get; set; }
-		public string? WalletAddress { get; set; }
 	}
 }
