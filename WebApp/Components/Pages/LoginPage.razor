@@ -1,5 +1,7 @@
 ﻿@page "/login"
 @using Application.DTOs
+@using System.Text.Json
+@using Microsoft.AspNetCore.Mvc
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider Auth
 @inject IJSRuntime JS
@@ -7,10 +9,15 @@
 
 <h3>Authentication</h3>
 
-@if (!string.IsNullOrEmpty(errorMessage))
+@if (errorMessages.Any())
 {
 	<div class="alert alert-danger" role="alert">
-		@errorMessage
+		<ul class="mb-0">
+			@foreach (var err in errorMessages)
+			{
+				<li>@err</li>
+			}
+		</ul>
 	</div>
 }
 
@@ -24,10 +31,10 @@
 	@if (isSignIn)
 	{
 		<div class="auth-form">
-			<input type="text" placeholder="Username" @bind="loginModel.Login" />
-			<input type="password" placeholder="Password" @bind="loginModel.Password" />
+			<input type="text" placeholder="Username" @bind="loginDto.Login" />
+			<input type="password" placeholder="Password" @bind="loginDto.Password" />
 			<label>
-				<input type="checkbox" @bind="loginModel.RememberMe" /> Remember Me
+				<input type="checkbox" @bind="loginDto.RememberMe" /> Remember Me
 			</label>
 			<button class="auth-btn" @onclick="SignIn">Sign In</button>
 		</div>
@@ -35,9 +42,9 @@
 	else
 	{
 		<div class="auth-form">
-			<input type="text" placeholder="Username" @bind="registerModel.Login" />
-			<input type="password" placeholder="Password" @bind="registerModel.Password" />
-			<input type="email" placeholder="Email (optional)" @bind="registerModel.Email" />
+			<input type="text" placeholder="Username" @bind="registerDto.Login" />
+			<input type="password" placeholder="Password" @bind="registerDto.Password" />
+			<input type="email" placeholder="Email (optional)" @bind="registerDto.Email" />
 
 			<button class="auth-btn" @onclick="SignUp">Sign Up</button>
 			@if (!string.IsNullOrEmpty(registrationMessage))
@@ -50,8 +57,8 @@
 else
 {
 	<div class="user-info">
-		<h4>Welcome, @user.Login!</h4>
-		<p>Role: <strong>@(user.Role?.ToLower() ?? "user")</strong></p>
+		<h4>Welcome, @userDto.Login!</h4>
+		<p>Role: <strong>@(userDto.Role?.ToLower() ?? "user")</strong></p>
 
 		<button class="auth-btn" @onclick="() => showPasswordForm = !showPasswordForm">Change Password</button>
 
@@ -60,20 +67,20 @@ else
 			<div class="password-form">
 				<div>
 					<label>Old Password:</label>
-					<input type="password" @bind="changePasswordModel.OldPassword" />
+					<input type="password" @bind="changePasswordDto.OldPassword" />
 				</div>
 				<div>
 					<label>New Password:</label>
-					<input type="password" @bind="changePasswordModel.NewPassword" />
+					<input type="password" @bind="changePasswordDto.NewPassword" />
 				</div>
 				<button class="auth-btn" @onclick="ChangePassword">Save</button>
 			</div>
 		}
 
 		@{
-			var role = user.Role?.ToLower() ?? "user";
-			var showGitHub = AtLeast(role, "tester") && string.IsNullOrEmpty(user.GitHubId);
-			var showMetaMask = AtLeast(role, "auditor") && (AllowManyWallets || string.IsNullOrEmpty(user.WalletAddress));
+			var role = userDto.Role?.ToLower() ?? "user";
+			var showGitHub = AtLeast(role, "tester") && string.IsNullOrEmpty(userDto.GitHubId);
+			var showMetaMask = AtLeast(role, "auditor") && (AllowManyWallets || string.IsNullOrEmpty(userDto.WalletAddress));
 		}
 
 		@if (showGitHub)
@@ -94,12 +101,13 @@ else
 	private bool isSignIn = true;
 	private bool showPasswordForm = false;
 	private string registrationMessage = "";
-	private string? errorMessage;
+	
+	private List<string> errorMessages = new();
 
-	private LoginDto loginModel = new();
-	private RegisterDto registerModel = new();
-	private ChangePasswordDto changePasswordModel = new();
-	private UserDto user = new();
+	private LoginDto loginDto = new();
+	private RegisterDto registerDto = new();
+	private ChangePasswordDto changePasswordDto = new();
+	private UserDto userDto = new();
 
 	private const bool AllowManyWallets = false;
 
@@ -107,13 +115,18 @@ else
 	{
 		try
 		{
-			errorMessage = null;
+			errorMessages.Clear();
 
 			var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
 
-			if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("errorMessage", out var errorMsg))
+			if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("errorMessage", out var errorMsgValues))
 			{
-				errorMessage = errorMsg;
+				var msg = errorMsgValues.ToString();
+
+				if (!string.IsNullOrEmpty(msg))
+				{
+					errorMessages.Add(msg);
+				}
 			}
 		}
 		catch (Exception ex)
@@ -129,10 +142,10 @@ else
 
 			if (isAuthenticated)
 			{
-				user.Login = state.User.Identity!.Name!;
-				user.Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "user";
-				user.GitHubId = state.User.FindFirst("urn:github:login")?.Value;
-				user.WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value;
+				userDto.Login = state.User.Identity!.Name!;
+				userDto.Role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.ToLower() ?? "user";
+				userDto.GitHubId = state.User.FindFirst("urn:github:login")?.Value;
+				userDto.WalletAddress = state.User.FindFirst("urn:wallet:address")?.Value;
 			}
 		}
 		catch (Exception ex)
@@ -152,14 +165,14 @@ else
 
 	private async Task SignIn()
 	{
-		errorMessage = null;
+		errorMessages.Clear();
 
 		try
 		{
-			user = await JS.InvokeAsync<UserDto>(
+			userDto = await JS.InvokeAsync<UserDto>(
 				"sendRequestViaBrowser",
 				"/api/auth/login",
-				loginModel
+				loginDto
 			);
 
 			isAuthenticated = true;
@@ -167,27 +180,26 @@ else
 		catch (JSException jsEx)
 		{
 			isAuthenticated = false;
-			errorMessage = jsEx.Message;
-			Console.Error.WriteLine(jsEx);
+			HandleJsError(jsEx.Message);
 		}
 		catch (Exception ex)
 		{
 			isAuthenticated = false;
-			errorMessage = "Internal Error";
+			errorMessages.Add("Internal Error");
 			Console.Error.WriteLine(ex);
 		}
 	}
 
 	private async Task SignUp()
 	{
-		errorMessage = null;
+		errorMessages.Clear();
 
 		try
 		{
-			user = await JS.InvokeAsync<UserDto>(
+			userDto = await JS.InvokeAsync<UserDto>(
 				"sendRequestViaBrowser",
 				"/api/auth/register",
-				registerModel
+				registerDto
 			);
 
 			isAuthenticated = true;
@@ -195,39 +207,37 @@ else
 		catch (JSException jsEx)
 		{
 			isAuthenticated = false;
-			errorMessage = jsEx.Message;
-			Console.Error.WriteLine(jsEx);
+			HandleJsError(jsEx.Message);
 		}
 		catch (Exception ex)
 		{
 			isAuthenticated = false;
-			errorMessage = "Internal Error";
+			errorMessages.Add("Internal Error");
 			Console.Error.WriteLine(ex);
 		}
 	}
 
 	private async Task ChangePassword()
 	{
-		errorMessage = null;
+		errorMessages.Clear();
 
 		try
 		{
 			_ = await JS.InvokeAsync<UserDto>(
 				"sendRequestViaBrowser",
 				"/api/auth/change-password",
-				changePasswordModel
+				changePasswordDto
 			);
 
 			showPasswordForm = false;
 		}
 		catch (JSException jsEx)
 		{
-			errorMessage = jsEx.Message;
-			Console.Error.WriteLine(jsEx);
+			HandleJsError(jsEx.Message);
 		}
 		catch (Exception ex)
 		{
-			errorMessage = "Internal Error";
+			errorMessages.Add("Internal Error");
 			Console.Error.WriteLine(ex);
 		}
 	}
@@ -239,7 +249,7 @@ else
 
 	private async Task ConnectMetaMask()
 	{
-		errorMessage = null;
+		errorMessages.Clear();
 
 		try
 		{
@@ -250,26 +260,25 @@ else
 				await JS.InvokeVoidAsync(
 					"sendRequestViaBrowser",
 					"/api/auth/link-metamask",
-					new { walletAddress = accounts[0] }
+					new MetaMaskDto { WalletAddress = accounts[0] }
 				);
 
 				var state = await Auth.GetAuthenticationStateAsync();
-				user.WalletAddress = accounts[0];
+				userDto.WalletAddress = accounts[0];
 			}
 			else
 			{
-				errorMessage = "MetaMask returned empty account list";
+				errorMessages.Add("MetaMask returned empty account list");
 				Console.Error.WriteLine($"No metamask accounts");
 			}
 		}
 		catch (JSException jsEx)
 		{
-			errorMessage = jsEx.Message;
-			Console.Error.WriteLine(jsEx);
+			HandleJsError(jsEx.Message);
 		}
 		catch (Exception ex)
 		{
-			errorMessage = "Internal Error";
+			errorMessages.Add("Internal Error");
 			Console.Error.WriteLine(ex);
 		}
 	}
@@ -290,5 +299,34 @@ else
 		var minIdx = Array.IndexOf(RoleRank, min.Trim().ToLowerInvariant());
 
 		return idx >= 0 && idx >= minIdx;
+	}
+
+	private void HandleJsError(string jsExMessage)
+	{
+		try
+		{
+			var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(
+				jsExMessage,
+				new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+			);
+
+			if (problem?.Errors != null && problem.Errors.Any())
+			{
+				errorMessages = problem.Errors
+				.SelectMany(kv => kv.Value)
+				.Select(m => m.Trim())
+				.ToList();
+			}
+			else
+			{
+				errorMessages.Add(jsExMessage);
+			}
+		}
+		catch
+		{
+			errorMessages.Add(jsExMessage);
+		}
+
+		Console.Error.WriteLine(jsExMessage);
 	}
 }

@@ -63,18 +63,23 @@ h1:focus {
 
 .main-container {
     display: flex;
-    gap: 20px;
+    gap: 30px;
     align-items: flex-start;
 }
 
 .left-panel {
-    flex: 2;
+    display: flex;
+    flex: 1.5;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 800px;
 }
 
 .right-panel {
-    flex: 1;
     display: flex;
+    flex: 1.5;
     flex-direction: column;
+    flex-shrink: 0;
     gap: 10px;
     padding: 15px;
     background: #f8f9fa;
@@ -133,9 +138,27 @@ h1:focus {
     border-radius: 5px;
     font-family: Consolas, Monaco, "Courier New", monospace;
     white-space: pre-wrap;
-    overflow-x: auto;
+    overflow: hidden;
     max-width: 100%;
 }
+
+    .output-container pre {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        overflow-x: auto;
+        margin: 0;
+        padding: 0;
+    }
+
+    .output-container code {
+        resize: vertical;
+        display: block;
+        overflow: visible;
+    }
 
 .copy-btn {
     position: absolute;

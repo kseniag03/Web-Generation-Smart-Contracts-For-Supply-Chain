@@ -1,9 +1,10 @@
-﻿using Application.Common;
+﻿using System.ComponentModel.DataAnnotations;
+using Application.Common;
 using YamlDotNet.Serialization;
 
 namespace Application.Specifications.Yaml
 {
-    public class ContractModel
+    public class ContractModel : IValidatableObject
     {
         public ContractModel()
         {
@@ -13,6 +14,8 @@ namespace Application.Specifications.Yaml
             IdType = AppConstants.DefaultIdType;
         }
 
+        [Required(ErrorMessage = "The name of the contract is required")]
+        [RegularExpression(@"^[A-Za-z0-9_]+$", ErrorMessage = "Only Latin letters, numbers, and '_' are allowed.")]
         [YamlMember(Alias = "contractName")]
         public string ContractName { get; set; }
 
@@ -60,5 +63,18 @@ namespace Application.Specifications.Yaml
 
         [YamlMember(Alias = "functions")]
         public List<FunctionModel> Functions { get; set; } = new();
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext ctx)
+        {
+            var results = new List<ValidationResult>();
+
+            Validator.TryValidateProperty(
+                ContractName,
+                new ValidationContext(this) { MemberName = nameof(ContractName) },
+                results
+            );
+
+            return results;
+        }
     }
 }

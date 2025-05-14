@@ -3,10 +3,23 @@
 @using Application.Common
 @using Application.DTOs
 @using System.Text.Json
+@using Microsoft.AspNetCore.Mvc
 @using WebApp.Components.Pages.Generator
 @inject IJSRuntime JS
 
 <h1>Generate Smart Contract</h1>
+
+@if (errorMessages.Any())
+{
+	<div class="alert alert-danger" role="alert">
+		<ul class="mb-0">
+			@foreach (var err in errorMessages)
+			{
+				<li>@err</li>
+			}
+		</ul>
+	</div>
+}
 
 <div class="main-container">
 
@@ -51,8 +64,12 @@
 	private string[] Tabs = { "Contract", "Test", "Gas Report" };
 	private string[] TabContents = new string[3] { "", "", "" };
 
+	private List<string> errorMessages = new();
+
 	private async Task HandleSetup()
 	{
+		errorMessages.Clear();
+
 		try
 		{
 			var doc = await JS.InvokeAsync<JsonElement>(
@@ -65,7 +82,7 @@
 		}
 		catch (JSException jsEx)
 		{
-			Console.Error.WriteLine($"HandleSetup JS error: {jsEx}");
+			HandleJsError(jsEx.Message);
 		}
 		catch (Exception ex)
 		{
@@ -83,6 +100,8 @@
 
 	private async Task HandleGenerate()
 	{
+		errorMessages.Clear();
+
 		try
 		{
 			Model.LayoutYaml = YamlContent;
@@ -101,7 +120,7 @@
 		}
 		catch (JSException jsEx)
 		{
-			Console.Error.WriteLine($"HandleGenerate JS error: {jsEx}");
+			HandleJsError(jsEx.Message);
 		}
 		catch (Exception ex)
 		{
@@ -137,5 +156,34 @@
 	{
 		TabContents[update.tab] = update.code;
 		return Task.CompletedTask;
+	}
+
+	private void HandleJsError(string jsExMessage)
+	{
+		try
+		{
+			var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(
+				jsExMessage,
+				new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+			);
+
+			if (problem?.Errors != null && problem.Errors.Any())
+			{
+				errorMessages = problem.Errors
+				.SelectMany(kv => kv.Value)
+				.Select(m => m.Trim())
+				.ToList();
+			}
+			else
+			{
+				errorMessages.Add(jsExMessage);
+			}
+		}
+		catch
+		{
+			errorMessages.Add(jsExMessage);
+		}
+
+		Console.Error.WriteLine(jsExMessage);
 	}
 }

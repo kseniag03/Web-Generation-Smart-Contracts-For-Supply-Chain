@@ -1,4 +1,6 @@
-﻿using Application.Common;
+﻿using System.ComponentModel.DataAnnotations;
+using Application.Common;
+using Core.Enums;
 
 namespace Application.DTOs
 {
@@ -10,6 +12,9 @@ namespace Application.DTOs
             LayoutYaml = AppConstants.DefaultYamlContent;
         }
 
+        [Required]
+        [EnumDataType(typeof(ContractArea),
+            ErrorMessage = "Area must be one of: Empty, IoT, Pharmaceutics")]
         public string Area { get; set; }
 
         public string LayoutYaml { get; set; }

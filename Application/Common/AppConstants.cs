@@ -1,4 +1,6 @@
-﻿namespace Application.Common
+﻿using Core.Enums;
+
+namespace Application.Common
 {
     public class AppConstants
     {
@@ -28,9 +30,9 @@
         public const string AdminLastname = "Administrator";
         public const string AdminEmail = "admin@example.com";
 
-        public const string EmptyContractAreaPath = "Empty";
-        public const string IoTContractAreaPath = "IoT";
-        public const string PharmaceuticsContractAreaPath = "Pharmaceutics";
+        public const string EmptyContractAreaPath = nameof(ContractArea.Empty);
+        public const string IoTContractAreaPath = nameof(ContractArea.IoT);
+        public const string PharmaceuticsContractAreaPath = nameof(ContractArea.Pharmaceutics);
         public const string DefaultContractAreaPath = EmptyContractAreaPath;
 
         public const string ContractSbn = "contract";

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Application.DTOs;
 using Application.Services;
 using Utilities.Interfaces;
+using System.ComponentModel.DataAnnotations;
+using Humanizer;
 
 namespace WebApp.Controllers
 {
@@ -230,15 +232,15 @@ namespace WebApp.Controllers
                 return BadRequest("Missing contract parameter");
             }
 
-            var instancePath = _contractService.GetInstancePath(paramsDto);
-
-            if (instancePath is null)
-            {
-                return BadRequest("Error generating instance path");
-            }
-
             try
             {
+                var instancePath = _contractService.GetInstancePath(paramsDto);
+
+                if (instancePath is null)
+                {
+                    return BadRequest("Error generating instance path");
+                }
+
                 var result = await action(instancePath);
 
                 Console.WriteLine("=== ContractAction result ===");
@@ -250,6 +252,14 @@ namespace WebApp.Controllers
                 }
 
                 return resultHandler(result);
+            }
+            catch (YamlDotNet.Core.YamlException ex)
+            {
+                return BadRequest($"YAML syntax error at line {ex.Start.Line}, col {ex.Start.Column}: {ex.Message}");
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {

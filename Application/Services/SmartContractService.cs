@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.ComponentModel.DataAnnotations;
 using Application.Common;
 using Application.DTOs;
 using Application.Interfaces;
@@ -44,23 +45,19 @@ namespace Application.Services
                 paramsDto.LayoutYaml = AppConstants.DefaultYamlContent;
             }
 
-            string? solutionDirectory;
-            ContractModel? model;
+            var model = _contractModelProvider.GetContractModelFromYaml(paramsDto.LayoutYaml);
+            var ctx = new ValidationContext(model);
+            var results = new List<ValidationResult>();
 
-            try
+            if (!Validator.TryValidateObject(model, ctx, results, validateAllProperties: true))
             {
-                solutionDirectory = _solutionPathProvider.GetSolutionRoot();
-                model = _contractModelProvider.GetContractModelFromYaml(paramsDto.LayoutYaml);
-            }
-            catch (Exception ex) when (ex is YamlDotNet.Core.YamlException)
-            {
-                Console.WriteLine("Trying to load incorrect yaml model, replacing yaml to default {}");
+                var msg = string.Join("; ", results.Select(r => r.ErrorMessage));
 
-                paramsDto.LayoutYaml = AppConstants.DefaultYamlContent;
-                solutionDirectory = _solutionPathProvider.GetSolutionRoot();
-                model = _contractModelProvider.GetContractModelFromYaml(paramsDto.LayoutYaml);
+                throw new ValidationException($"Invalid contract model: {msg}");
             }
-            
+
+            var solutionDirectory = _solutionPathProvider.GetSolutionRoot();
+
             return ContractPathHelper.ComputeInstancePath(paramsDto.Area, model, solutionDirectory);
         }
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Net;
+using System.Runtime.InteropServices;
 using Utilities.DI;
 using WebApp.Components;
 
@@ -12,8 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents(options =>
     options.DetailedErrors = builder.Environment.IsDevelopment())
-    .AddInteractiveServerComponents()
-    .AddAuthenticationStateSerialization();
+    .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
 
@@ -39,8 +39,11 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddUtilities();
 
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"));
+if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"));
+}
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
