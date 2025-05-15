@@ -6,6 +6,8 @@ using System.Text.Json;
 using Application.Common;
 using Application.Interfaces;
 using Microsoft.Extensions.Hosting;
+using Nethereum.Contracts.QueryHandlers.MultiCall;
+using Application.Specifications.Yaml;
 
 namespace Infrastructure.Repositories
 {
@@ -62,7 +64,19 @@ namespace Infrastructure.Repositories
             return spec.ContractName;
         }
 
-        private async Task<string> GenerateCodeUsingSbnTemplate(string area, string yaml, string instancePath, string sbnType = AppConstants.DefaultSbnType)
+        public async Task UpdateFileContent(string area, string yaml, string instancePath, string? content, string sbnType = AppConstants.DefaultSbnType)
+        {
+            var spec = SpecLoader.LoadModelFromYaml(yaml);
+
+            await EditSourceCodeFile(area, spec, instancePath, content, sbnType);
+        }
+
+        private async Task<string> GenerateCodeUsingSbnTemplate(
+            string area,
+            string yaml,
+            string instancePath,
+            string sbnType = AppConstants.DefaultSbnType
+        )
         {
             var sbnPath = Path.Combine(_templatesPath, $"{sbnType}.sbn");
             var sbnText = await File.ReadAllTextAsync(sbnPath);
@@ -81,6 +95,20 @@ namespace Infrastructure.Repositories
             ));
 
             var result = template.Render(ctx);
+
+            await EditSourceCodeFile(area, spec, instancePath, result, sbnType);
+
+            return result;
+        }
+
+        private async Task EditSourceCodeFile(
+            string area,
+            ContractModel spec,
+            string instancePath,
+            string? result,
+            string sbnType = AppConstants.DefaultSbnType
+        )
+        {
             var outputPath = Path.Combine(instancePath, sbnType);
 
             Directory.CreateDirectory(outputPath);
@@ -94,8 +122,6 @@ namespace Infrastructure.Repositories
             var contractFilePath = Path.Combine(outputPath, $"{area}-{spec.ContractName}.{extension}");
 
             await File.WriteAllTextAsync(contractFilePath, result);
-
-            return result;
         }
     }
 }

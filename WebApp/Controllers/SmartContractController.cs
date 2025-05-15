@@ -4,7 +4,6 @@ using Application.DTOs;
 using Application.Services;
 using Utilities.Interfaces;
 using System.ComponentModel.DataAnnotations;
-using Humanizer;
 
 namespace WebApp.Controllers
 {
@@ -52,9 +51,9 @@ namespace WebApp.Controllers
         }
 
         [HttpPost("generate")]
-        public Task<IActionResult> GenerateContract([FromBody] ContractParamsDto paramsDto)
+        public async Task<IActionResult> GenerateContract([FromBody] ContractParamsDto paramsDto)
         {
-            return ContractAction(
+            return await ContractAction(
                 paramsDto,
                 async instancePath =>
                 {
@@ -76,7 +75,7 @@ namespace WebApp.Controllers
                     {
                         var error = ex.Message;
 
-                        Console.WriteLine($"Error via local debug without docker: {error}");
+                        Console.WriteLine($"Executor setup error via local debug: {error}");
                     }
 
                     return new
@@ -109,6 +108,44 @@ namespace WebApp.Controllers
                     ? NotFound("Contract code not found")
                     : Ok(new { paramsDto.Area, code })
             );
+        }
+
+        [HttpPost("update-code")]
+        public async Task<IActionResult> UpdateContractCode([FromBody] ContractUpdateDto updateDto)
+        {
+            if (updateDto == null || updateDto.Current == null)
+            {
+                return BadRequest("Missing contract parameter");
+            }
+
+            if (string.IsNullOrWhiteSpace(updateDto.UpdatedCode) &&
+                string.IsNullOrWhiteSpace(updateDto.UpdatedTestScript) &&
+                string.IsNullOrWhiteSpace(updateDto.UpdatedGasScript))
+            {
+                return BadRequest("No changes applied");
+            }
+
+            try
+            {
+                var instancePath = _contractService.GetInstancePath(updateDto.Current);
+
+                if (instancePath is null)
+                {
+                    return BadRequest("Error getting instance path");
+                }
+
+                await _contractService.UpdateContractFiles(instancePath, updateDto);
+
+                return Ok("Files updated");
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal Server Error: " + ex.Message);
+            }
         }
 
         [HttpPost("compile")]

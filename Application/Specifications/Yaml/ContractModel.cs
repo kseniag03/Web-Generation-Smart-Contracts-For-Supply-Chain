@@ -15,7 +15,7 @@ namespace Application.Specifications.Yaml
         }
 
         [Required(ErrorMessage = "The name of the contract is required")]
-        [RegularExpression(@"^[A-Za-z0-9_]+$", ErrorMessage = "Only Latin letters, numbers, and '_' are allowed.")]
+        [RegularExpression(@"^[A-Za-z0-9_]+$", ErrorMessage = "ContractName: only Latin letters, numbers, and '_' are allowed.")]
         [YamlMember(Alias = "contractName")]
         public string ContractName { get; set; }
 

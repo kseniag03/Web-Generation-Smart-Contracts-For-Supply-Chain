@@ -172,7 +172,7 @@ namespace WebApp.Controllers
 
                 if (string.IsNullOrEmpty(login))
                 {
-                    return BadRequest(new { message = "Null of empty login" });
+                    return BadRequest(new { message = "Null or empty login" });
                 }
 
                 var result = await _authService.ChangePassword(login, changePassword.OldPassword, changePassword.NewPassword);

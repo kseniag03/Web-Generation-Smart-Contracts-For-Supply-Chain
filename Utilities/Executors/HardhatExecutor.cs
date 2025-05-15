@@ -65,9 +65,11 @@ namespace Utilities.Executors
 
         private async Task<string> RunScript(string command, string instancePath)
         {
+            Console.WriteLine($"Checking instancePath = {instancePath} for Hardhat");
+
             foreach (var file in Directory.EnumerateFiles(instancePath))
             {
-                Console.WriteLine("!!! File: " + file);
+                Console.WriteLine($"Found file: {file}");
             }
 
             var instanceId = new FileInfo(instancePath).Name;

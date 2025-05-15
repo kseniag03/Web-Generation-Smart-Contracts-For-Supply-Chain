@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using Application.Common;
 using Application.DTOs;
 using Application.Interfaces;
-using Application.Specifications.Yaml;
 using Core.Enums;
 
 namespace Application.Services
@@ -74,7 +73,8 @@ namespace Application.Services
 
             try
             {
-                _contractRepository.CopyBaseHardhatConfigs(instancePath);           // base configs for hardhat launch
+                _contractRepository.CopyBaseHardhatConfigs(instancePath);
+                _contractRepository.CopyBaseFoundryConfigs(instancePath);
 
                 var contractCode = await _templateRepository.GenerateContractCode(paramsDto.Area, paramsDto.LayoutYaml, instancePath);
                 var contractTestScript = await _templateRepository.GenerateContractTestScript(paramsDto.Area, paramsDto.LayoutYaml, instancePath);
@@ -95,6 +95,55 @@ namespace Application.Services
                 // _contractStorage.SaveContractToDb(artefacts);
 
                 return artefacts;
+            }
+            finally
+            {
+                sem.Release();
+            }
+        }
+
+        public async Task UpdateContractFiles(string instancePath, ContractUpdateDto updateDto)
+        {
+            var sem = _locks.GetOrAdd(instancePath, _ => new SemaphoreSlim(1, 1));
+
+            await sem.WaitAsync();
+
+            try
+            {
+                var contractName = _templateRepository.ExtractContractName(updateDto.Current.LayoutYaml);
+
+                if (!string.IsNullOrWhiteSpace(updateDto.UpdatedCode))
+                {
+                    await _templateRepository.UpdateFileContent(
+                        updateDto.Current.Area,
+                        updateDto.Current.LayoutYaml,
+                        instancePath,
+                        updateDto.UpdatedCode,
+                        AppConstants.ContractSbn
+                    );
+                }
+
+                if (!string.IsNullOrWhiteSpace(updateDto.UpdatedTestScript))
+                {
+                    await _templateRepository.UpdateFileContent(
+                        updateDto.Current.Area,
+                        updateDto.Current.LayoutYaml,
+                        instancePath,
+                        updateDto.UpdatedTestScript,
+                        AppConstants.TestSbn
+                    );
+                }
+
+                if (!string.IsNullOrWhiteSpace(updateDto.UpdatedGasScript))
+                {
+                    await _templateRepository.UpdateFileContent(
+                        updateDto.Current.Area,
+                        updateDto.Current.LayoutYaml,
+                        instancePath,
+                        updateDto.UpdatedGasScript,
+                        AppConstants.TestGasSbn
+                    );
+                }
             }
             finally
             {

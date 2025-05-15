@@ -28,23 +28,23 @@
 		<button class="custom-btn" @onclick="HandleGenerate">Generate</button>
 
 		<EditorTabs Model="@Model"
-					ShowResults="@ShowResults"
-					Tabs="@Tabs"
-					TabContents="@TabContents"
-					ActiveTab="@ActiveTab"
-					IsEditing="@IsEditing"
-					OnEditToggle="@OnEditToggle"
-					OnTabSelected="@OnTabSelected"
-					OnCodeChanged="@UpdateTabContent" />
+		ShowResults="@ShowResults"
+		Tabs="@Tabs"
+		TabContents="@TabContents"
+		ActiveTab="@ActiveTab"
+		IsEditing="@IsEditing"
+		OnEditToggle="@OnEditToggle"
+		OnTabSelected="@OnTabSelected"
+		OnCodeChanged="@UpdateTabContent" />
 	</div>
 
 	<div class="right-panel">
 		<RightPanel Model="Model"
-					YamlContent="@YamlContent"
-					ShowYamlEditor="ShowYamlEditor"
-					CanSetup="CanSetup"
-					OnSetup="HandleSetup"
-					OnYamlChanged="OnYamlChanged" />
+		YamlContent="@YamlContent"
+		ShowYamlEditor="ShowYamlEditor"
+		CanSetup="CanSetup"
+		OnSetup="HandleSetup"
+		OnYamlChanged="OnYamlChanged" />
 	</div>
 
 </div>
@@ -64,6 +64,8 @@
 	private string[] Tabs = { "Contract", "Test", "Gas Report" };
 	private string[] TabContents = new string[3] { "", "", "" };
 
+	private Dictionary<string, string> InitialTabContents = new();
+
 	private List<string> errorMessages = new();
 
 	private async Task HandleSetup()
@@ -75,7 +77,8 @@
 			var doc = await JS.InvokeAsync<JsonElement>(
 				"sendRequestViaBrowser",
 				"/api/contracts/setup",
-				Model);
+				Model
+			);
 
 			YamlContent = doc.GetProperty("yaml").GetString() ?? AppConstants.DefaultYamlContent;
 			ShowYamlEditor = true;
@@ -109,11 +112,16 @@
 			var data = await JS.InvokeAsync<JsonElement>(
 				"sendRequestViaBrowser",
 				"/api/contracts/generate",
-				Model);
+				Model
+			);
 
 			TabContents[0] = data.GetProperty("code").GetString() ?? "";
 			TabContents[1] = data.GetProperty("testScript").GetString() ?? "";
 			TabContents[2] = data.GetProperty("gasReport").GetString() ?? "";
+
+			InitialTabContents[AppConstants.ContractSbn] = TabContents[0];
+			InitialTabContents[AppConstants.TestSbn] = TabContents[1];
+			InitialTabContents[AppConstants.TestGasSbn] = TabContents[2];
 
 			ShowResults = true;
 			IsEditing = false;
@@ -137,12 +145,50 @@
 	private async Task OnEditToggle()
 	{
 		if (IsEditing)
-		{/*
-			var payload = new { Model.Area, Tab = Tabs[ActiveTab], Code = TabContents[ActiveTab] };
-			var result = await JS.InvokeAsync<JsonElement>(
-				"sendRequestViaBrowser",
-				"/api/contracts/update-code",
-			payload); // need to add endpoint*/
+		{
+			var updateDto = new ContractUpdateDto
+			{
+				Current = Model
+			};
+
+			if (InitialTabContents.TryGetValue(AppConstants.ContractSbn, out var originalCode) &&
+				originalCode != TabContents[0])
+			{
+				updateDto.UpdatedCode = TabContents[0];
+			}
+
+			if (InitialTabContents.TryGetValue(AppConstants.TestSbn, out var originalTest) &&
+				originalTest != TabContents[1])
+			{
+				updateDto.UpdatedTestScript = TabContents[1];
+			}
+
+			if (InitialTabContents.TryGetValue(AppConstants.TestGasSbn, out var originalGas) &&
+				originalGas != TabContents[2])
+			{
+				updateDto.UpdatedGasScript = TabContents[2];
+			}
+
+			try
+			{
+				_ = await JS.InvokeAsync<JsonElement>(
+					"sendRequestViaBrowser",
+					"/api/contracts/update-code",
+					updateDto
+				);
+			}
+			catch (JSException jsEx)
+			{
+				HandleJsError(jsEx.Message);
+			}
+			catch (Exception ex)
+			{
+				Console.Error.WriteLine($"OnEditToggle error: {ex}");
+			}
+
+			InitialTabContents[AppConstants.ContractSbn] = TabContents[0];
+			InitialTabContents[AppConstants.TestSbn] = TabContents[1];
+			InitialTabContents[AppConstants.TestGasSbn] = TabContents[2];
 
 			IsEditing = false;
 		}

@@ -8,5 +8,6 @@ namespace Application.Interfaces
         string GetDeployedContractAddress(string contractName, string instancePath);
         AbiBytecodeDto? GetContractAbiBytecode(string contractName, string instancePath);
         void CopyBaseHardhatConfigs(string instancePath);
+        void CopyBaseFoundryConfigs(string instancePath);
     }
 }

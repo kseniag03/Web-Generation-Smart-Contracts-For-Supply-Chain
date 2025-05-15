@@ -56,6 +56,11 @@ namespace Infrastructure.Repositories
             CopyIfMissing("package-lock.json", instancePath); // if using fixed dependencies
         }
 
+        public void CopyBaseFoundryConfigs(string instancePath)
+        {
+            CopyIfMissing("foundry.toml", instancePath);
+        }
+
         private void CopyIfMissing(string fileName, string instancePath)
         {
             var source = Path.Combine(_configsPath, fileName);
